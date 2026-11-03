@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2fa9b8">
+  <meta name="description" content="Wysepka — przytulny idle city builder na małej wyspie.">
+  <meta name="format-detection" content="telephone=no">
+  <title>Wysepka</title>
+  <!-- Inline favicon: no request to /favicon.ico -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%232fa9b8'/%3E%3Cellipse cx='32' cy='42' rx='22' ry='9' fill='%23f3d9a0'/%3E%3Cellipse cx='32' cy='39' rx='17' ry='6.5' fill='%2388c96a'/%3E%3Cpath d='M22 38V29l8-6 8 6v9z' fill='%23fff1d6'/%3E%3Cpath d='M19 30l11-9 11 9-2.5 2L30 25l-8.5 7z' fill='%23e07a4f'/%3E%3Crect x='27.5' y='32' width='5' height='6' rx='1' fill='%237a4a2c'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="modulepreload" href="js/main.js">
+  <link rel="modulepreload" href="js/game.js">
+  <link rel="modulepreload" href="js/config.js">
+  <link rel="modulepreload" href="js/platform.js">
+  <link rel="modulepreload" href="js/i18n.js">
+  <link rel="modulepreload" href="js/lang/pl.js">
+  <link rel="modulepreload" href="js/lang/en.js">
+  <link rel="modulepreload" href="js/core/events.js">
+  <link rel="modulepreload" href="js/core/rng.js">
+  <link rel="modulepreload" href="js/core/map.js">
+  <link rel="modulepreload" href="js/core/economy.js">
+  <link rel="modulepreload" href="js/core/state.js">
+  <link rel="modulepreload" href="js/core/quests.js">
+  <link rel="modulepreload" href="js/core/prestige.js">
+  <link rel="modulepreload" href="js/core/sim.js">
+  <link rel="modulepreload" href="js/core/actions.js">
+  <link rel="modulepreload" href="js/save/save.js">
+</head>
+<body>
+  <div id="app">
+    <canvas id="map" aria-hidden="true"></canvas>
+    <div id="ui"></div>
+    <div id="splash" class="splash" role="status">
+      <div class="splash__logo" aria-hidden="true">
+        <svg viewBox="0 0 120 80" width="120" height="80">
+          <ellipse cx="60" cy="62" rx="50" ry="12" fill="#f3d9a0"/>
+          <ellipse cx="60" cy="57" rx="40" ry="9" fill="#88c96a"/>
+          <path d="M44 56V40l16-12 16 12v16z" fill="#fff1d6"/>
+          <path d="M38 42l22-18 22 18-5 4-17-14-17 14z" fill="#e07a4f"/>
+          <rect x="55" y="45" width="10" height="11" rx="2" fill="#7a4a2c"/>
+          <rect x="68" y="26" width="6" height="10" rx="1.5" fill="#a9b3bd"/>
+        </svg>
+      </div>
+      <div class="splash__title">Wysepka</div>
+      <div class="splash__msg">Wczytywanie wyspy…</div>
+    </div>
+  </div>
+  <noscript><p class="noscript">Ta gra wymaga włączonego JavaScriptu. / This game needs JavaScript.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

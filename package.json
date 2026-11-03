@@ -1,0 +1,13 @@
+{
+  "name": "wysepka",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Wysepka — przytulny idle city builder w czystym HTML5 (bez bibliotek, bez sieci).",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "test": "node tools/test-core.mjs",
+    "shots": "node tools/shots.mjs",
+    "balance": "node tools/balance.mjs"
+  }
+}
