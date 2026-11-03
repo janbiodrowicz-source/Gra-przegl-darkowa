@@ -200,6 +200,9 @@ export const SCENARIOS = {
       await wait(page, 300);
       const s1 = await sel();
       if (!s1 || s1.kind !== 'building') throw new Error(`hut not selected: ${JSON.stringify(s1)}`);
+      // close the panel (on desktop it covers the right side) and let the camera settle
+      await page.keyboard.press('Escape');
+      await wait(page, 700);
       // 2) tap a tree
       const tree = await game(page, () => {
         // a tree far from the hut, with nothing standing in front of it

@@ -10,10 +10,11 @@ import { suggestSpot } from '../core/actions.js';
 import { getRates } from '../core/sim.js';
 import { currentQuest } from '../core/quests.js';
 import { idx, inBounds } from '../core/map.js';
-import { h, setClass } from './dom.js';
+import { h, retrigger, setClass } from './dom.js';
 import { amounts, icon } from './icons.js';
 import { fmt, fmtPct, fmtRate } from './format.js';
 import { createHud } from './hud.js';
+import { bump, centerOf, confetti, flyResources } from './juice.js';
 import { createBuildBar } from './buildbar.js';
 import { createPanel } from './panel.js';
 import { createToasts } from './toasts.js';
@@ -27,6 +28,7 @@ export function createUI({ game, bus, sfx, audio, platform }) {
   const ui = { mode: 'idle', placing: null, ghost: null, selected: null, hint: '', multi: false };
   const isTouch = matchMedia('(pointer: coarse)').matches;
   let artFor = defaultArt;
+  let locate = null; // (tileX, tileY) → [sx, sy] provided by the renderer
   let parts = null;
   let tip = null;
   let tipTimer = 0;
@@ -43,7 +45,7 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     const hud = createHud({
       onChip: (key, el) => { sfx.click(); toggleTip(key, el); },
       onQuests: () => openQuests(),
-      onClaim: () => claimCurrent(),
+      onClaim: (el) => claimCurrent(el),
       onSettings: () => openSettings(),
     });
     const bar = createBuildBar({
@@ -104,6 +106,8 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     const why = parts.bar.whyNot(game.state, rates(), type);
     if (why) {
       sfx.error();
+      const card = parts.bar.cards[type]?.el;
+      if (card) retrigger(card, 'is-shake');
       toast(why.text, { kind: why.reason === 'locked' ? 'info' : 'warn', icon: why.reason === 'locked' ? 'lock' : 'clock' });
       return;
     }
@@ -243,20 +247,30 @@ export function createUI({ game, bus, sfx, audio, platform }) {
   function openQuests() {
     sfx.click();
     hideTip();
-    parts.modals.open(questsDialog({ game, onClaim: (id) => claim(id) }));
+    parts.modals.open(questsDialog({ game, onClaim: (id, el) => claim(id, el) }));
   }
 
-  function claim(id) {
+  /** Flying resource icons into the HUD (coin sound when they land). */
+  function fly(amounts, from) {
+    if (!parts) return;
+    const chipEls = {};
+    for (const [k, c] of Object.entries(parts.hud.chips)) chipEls[k] = c.el;
+    flyResources(root, chipEls, amounts, from, () => sfx.coin());
+  }
+
+  function claim(id, sourceEl = null) {
+    const from = centerOf(sourceEl) || centerOf(parts.hud.el.querySelector('.qpill'));
     const r = game.dispatch('claimQuest', id);
     if (!r.ok) return;
     const chips = amounts(r.granted, { sign: '+' });
     if (chips.length) toast([`${t('ui.reward')}: `, ...chips], { kind: 'good', icon: 'star' });
+    fly(r.granted, from);
     update();
   }
 
-  function claimCurrent() {
+  function claimCurrent(el = null) {
     const q = currentQuest(game.state);
-    if (q && game.state.quests[q.id] === 'done') claim(q.id);
+    if (q && game.state.quests[q.id] === 'done') claim(q.id, el);
     else openQuests();
   }
 
@@ -297,9 +311,11 @@ export function createUI({ game, bus, sfx, audio, platform }) {
         audio.setMuted(false);
         game.platform.gameplayStart();
         if (ok) {
+          const from = centerOf(btn);
           const r = game.dispatch('grantReward', report.gained);
           const chips = amounts(r.gained, { sign: '+' });
           if (chips.length) toast([`${t('ui.reward')}: `, ...chips], { kind: 'good', icon: 'star' });
+          fly(r.gained, from);
         }
         parts.modals.close();
       },
@@ -391,14 +407,28 @@ export function createUI({ game, bus, sfx, audio, platform }) {
   });
   bus.on('demolished', (e) => {
     sfx.demolish();
+    if (locate) {
+      const [sx, sy] = locate(e.x, e.y);
+      fly(e.refund, { x: sx, y: sy - 20 });
+    }
     toast(t('toast.demolished', { name: name(e.building) }), { kind: 'info', icon: 'trash' });
   });
   bus.on('cleared', (e) => {
     if (e.kind === 't') sfx.chop();
     else sfx.crack();
+    if (locate) {
+      const [sx, sy] = locate(e.x, e.y);
+      fly(e.gained, { x: sx, y: sy - 24 });
+    }
   });
   bus.on('questDone', (e) => {
     sfx.questReady();
+    const pill = parts?.hud.el.querySelector('.qpill');
+    const c = centerOf(pill);
+    if (c) {
+      confetti(root, c.x, c.y);
+      bump(pill);
+    }
     toast(t('toast.questDone', { name: t(`q.${e.id}.title`) }), { kind: 'good', icon: 'quest' });
   });
   bus.on('questClaimed', () => {
@@ -468,6 +498,10 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     openQuests,
     openSettings,
     showWelcome,
+    /** Lets the renderer tell where a tile is on screen (for flying rewards). */
+    setWorldLocator(fn) {
+      locate = fn;
+    },
     /** Lets the renderer provide canvas thumbnails for cards and the panel. */
     setArtProvider(fn) {
       artFor = fn || defaultArt;

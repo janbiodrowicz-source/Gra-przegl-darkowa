@@ -10,9 +10,10 @@ import { canPlace } from '../core/actions.js';
 import { buildingAt } from '../core/economy.js';
 import { getRates } from '../core/sim.js';
 import { HH, HW, LIP, groundCode, groundZ, tileCenter, toGrid } from './iso.js';
-import { bakeTerrain, groundKey, islandBounds } from './terrain.js';
+import { bakeTerrain, coastSegments, groundKey, islandBounds } from './terrain.js';
 import { buildingHeight, drawBuilding, drawBuildingDynamic, drawRock, drawTree, hutChimney, tierOf } from './art.js';
 import { createFx } from './fx.js';
+import { createLife } from './life.js';
 import { iconDataUrl } from '../ui/icons.js';
 
 const TAU = Math.PI * 2;
@@ -60,6 +61,24 @@ export function createRenderer({ canvas, game, ui, bus }) {
   let bgCtx = null;
   let bgKey = '';
   let terrainVersion = 0;
+  const life = createLife();
+  let hover = null; // tile under the mouse (desktop), when it holds something clickable
+  let coast = [];
+  let sparkles = [];
+  const statuses = [];
+  let lastFloat = -1;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const statusIcons = {};
+  const STATUS_STYLE = {
+    staff: { icon: 'worker', color: '#c0392b' },
+    full: { icon: 'box', color: '#b86a00' },
+    hungry: { icon: 'food', color: '#c0392b' },
+  };
+  for (const [kind, st] of Object.entries(STATUS_STYLE)) {
+    const img = new Image();
+    img.src = iconDataUrl(st.icon, 48, st.color);
+    statusIcons[kind] = img;
+  }
 
   /* ------------------------------------------------------- setup */
 
@@ -296,6 +315,7 @@ export function createRenderer({ canvas, game, ui, bus }) {
       smokeAt.clear();
       yieldAt.clear();
       fx.clear();
+      life.reset();
       fitted = false;
       userMoved = false;
     }
@@ -305,6 +325,7 @@ export function createRenderer({ canvas, game, ui, bus }) {
       if (key !== tilesKey) {
         tilesKey = key;
         bounds = islandBounds(s.tiles, 120);
+        coast = coastSegments(s.tiles);
         makeWaves();
         if (view.w > 1) {
           computeLimits();
@@ -351,6 +372,8 @@ export function createRenderer({ canvas, game, ui, bus }) {
       if (onLand) continue;
       waves.push({ x: wx, y: wy, p: hash2(i, 1, 77) * TAU, s: 0.7 + hash2(i, 5, 77) * 0.6 });
     }
+    // twinkles of sunlight on the water, kept off the island like the waves
+    sparkles = waves.filter((_, i) => i % 2 === 0).map((w, i) => ({ x: w.x + 30 * Math.cos(i), y: w.y + 18 * Math.sin(i * 1.7), p: hash2(i, 2, 91) * TAU }));
   }
 
   /* --------------------------------------------------------- picking */
@@ -498,6 +521,7 @@ export function createRenderer({ canvas, game, ui, bus }) {
     }
 
     emitAmbient(dt);
+    life.update(dt, state, bounds);
     fx.update(dt);
   }
 
@@ -512,6 +536,10 @@ export function createRenderer({ canvas, game, ui, bus }) {
       ambientRatesAt = time;
     }
     const rates = ambientRates;
+    if (time - (emitAmbient.statusAt ?? -9) > 0.5) {
+      emitAmbient.statusAt = time;
+      refreshStatuses(rates);
+    }
     for (const o of objects) {
       if (o.kind !== 'b') continue;
       const b = o.b;
@@ -525,7 +553,7 @@ export function createRenderer({ canvas, game, ui, bus }) {
           fx.spawn('smoke', c.x + ch.x, c.y - z + ch.y, {
             vx: 5 + Math.random() * 3, vy: -12 - Math.random() * 6, r: 2.6, grow: 6.5, life: 2.4, alpha: 0.55, drag: 0.4,
           });
-          smokeAt.set(b.id, time + 0.38 + Math.random() * 0.25);
+          smokeAt.set(b.id, time + (reduced ? 1.2 : 0.38) + Math.random() * 0.25);
         }
         continue;
       }
@@ -537,6 +565,11 @@ export function createRenderer({ canvas, game, ui, bus }) {
       const next = yieldAt.get(b.id) ?? time + 2 + hash2(b.id, 7) * period;
       if (time >= next) {
         yieldAt.set(b.id, time + period);
+        // only for buildings on screen, and never more than ~3 labels per second
+        const [vx, vy] = worldToScreen(c.x, c.y - z);
+        if (vx < -20 || vy < 0 || vx > view.w + 20 || vy > view.h + 20) continue;
+        if (time - lastFloat < 0.3) { yieldAt.set(b.id, time + 0.6 + Math.random()); continue; }
+        lastFloat = time;
         for (const [res, rate] of Object.entries(p.rate)) {
           const amount = rate * (res === 'food' ? 1 : rates.mult) * period;
           if (amount < 1) continue;
@@ -544,6 +577,58 @@ export function createRenderer({ canvas, game, ui, bus }) {
         }
         if (b.type === 'quarry') fx.burst('dust', c.x - 8, c.y - z - 6, 4, { speed: 14, r: 4, grow: 5, life: 0.9, alpha: 0.55, drag: 2 });
       }
+    }
+  }
+
+  /** Status bubbles: no workers, storage full, hungry homes. */
+  function refreshStatuses(rates) {
+    statuses.length = 0;
+    let hungryHuts = 0;
+    for (const o of objects) {
+      if (o.kind !== 'b') continue;
+      const b = o.b;
+      const def = BUILDINGS[b.type];
+      let kind = null;
+      if (def.produce) {
+        const p = rates.per.get(b.id);
+        if (p && p.workers === 0) kind = 'staff';
+        else if (Object.keys(def.produce).every((r) => state.flags.full[r])) kind = 'full';
+      } else if (b.type === 'hut' && rates.hungry && hungryHuts < 3) {
+        kind = 'hungry';
+        hungryHuts++;
+      }
+      if (kind) statuses.push({ b, kind });
+    }
+  }
+
+  function drawStatuses(t) {
+    const sel = ui.state.selected;
+    for (const s of statuses) {
+      const b = s.b;
+      if (sel && sel.kind === 'building' && sel.id === b.id) continue;
+      const c = tileCenter(b.x, b.y);
+      const top = c.y - groundZ(state.tiles, b.x, b.y) - buildingHeight(b.type, tierOf(b.level)) - 4;
+      const [sx, sy0] = worldToScreen(c.x, top);
+      const sy = sy0 - 14 + (reduced ? 0 : Math.sin(t * 2.4 + b.id) * 2);
+      const st = STATUS_STYLE[s.kind];
+      ctx.beginPath();
+      ctx.arc(sx, sy, 12, 0, TAU);
+      ctx.moveTo(sx - 4.5, sy + 10);
+      ctx.lineTo(sx, sy + 17);
+      ctx.lineTo(sx + 4.5, sy + 10);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(40, 26, 16, 0.22)';
+      ctx.save();
+      ctx.translate(0, 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = '#fffaf0';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = st.color;
+      ctx.stroke();
+      const img = statusIcons[s.kind];
+      if (img.complete && img.naturalWidth) ctx.drawImage(img, sx - 8, sy - 8, 16, 16);
     }
   }
 
@@ -586,7 +671,45 @@ export function createRenderer({ canvas, game, ui, bus }) {
   }
 
   function drawWaves(t) {
+    if (reduced) t = 0;
     ctx.lineCap = 'round';
+    // animated surf along the visible cliffs
+    if (coast.length) {
+      for (const [off, alpha, dash] of [[3.5 + Math.sin(t * 1.3) * 1.6, 0.6, [9, 6]], [8.5 + Math.sin(t * 1.3 + 1.7) * 2.2, 0.32, [5, 9]]]) {
+        ctx.beginPath();
+        for (const [ax, ay, bx, by] of coast) {
+          ctx.moveTo(ax, ay + off);
+          ctx.lineTo(bx, by + off);
+        }
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash(dash);
+        ctx.lineDashOffset = -t * 7;
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+    // sun twinkles
+    ctx.fillStyle = '#ffffff';
+    for (const sp of sparkles) {
+      const a = Math.sin(t * 1.9 + sp.p);
+      if (a < 0.6) continue;
+      ctx.globalAlpha = (a - 0.6) * 1.6;
+      const r = 2.2 * a;
+      ctx.beginPath();
+      ctx.moveTo(sp.x, sp.y - r);
+      ctx.lineTo(sp.x + r * 0.3, sp.y);
+      ctx.lineTo(sp.x, sp.y + r);
+      ctx.lineTo(sp.x - r * 0.3, sp.y);
+      ctx.closePath();
+      ctx.moveTo(sp.x - r, sp.y);
+      ctx.lineTo(sp.x, sp.y + r * 0.3);
+      ctx.lineTo(sp.x + r, sp.y);
+      ctx.lineTo(sp.x, sp.y - r * 0.3);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
     ctx.strokeStyle = '#e9fffb';
     ctx.lineWidth = 1.6;
     for (const w of waves) {
@@ -711,6 +834,14 @@ export function createRenderer({ canvas, game, ui, bus }) {
   }
 
   function drawSelection(t) {
+    if (hover && !(ui.state.selected && selectedTile()?.x === hover.x && selectedTile()?.y === hover.y)) {
+      diamond(hover.x, hover.y, groundZ(state.tiles, hover.x, hover.y), 0.01);
+      ctx.lineWidth = 2 / Math.max(0.6, cam.zoom);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.fill();
+    }
     const s = selectedTile();
     if (!s) return;
     const z = groundZ(state.tiles, s.x, s.y);
@@ -733,13 +864,16 @@ export function createRenderer({ canvas, game, ui, bus }) {
 
   function drawObjects(t) {
     const sel = ui.state.selected;
+    const walkers = life.visibleWalkers();
+    let wi = 0;
     for (const o of objects) {
+      while (wi < walkers.length && life.depthOf(walkers[wi]) < o.d) life.drawWalker(ctx, walkers[wi++], state);
       const c = tileCenter(o.x, o.y);
       const z = groundZ(state.tiles, o.x, o.y);
       const bx = c.x, by = c.y - z;
       if (o.kind === 't') {
         const sp = treeSprite(o.v, o.sand);
-        const sway = Math.sin(t * 1.1 + o.x * 1.7 + o.y) * 0.025;
+        const sway = reduced ? 0 : Math.sin(t * 1.1 + o.x * 1.7 + o.y) * 0.025;
         ctx.save();
         ctx.translate(bx, by);
         ctx.transform(1, 0, sway, 1, 0, 0);
@@ -757,9 +891,11 @@ export function createRenderer({ canvas, game, ui, bus }) {
       let sx = 1, sy = 1;
       const a = appear.get(b.id);
       if (a != null) {
-        const k = Math.min(1, (time - a) / 0.5);
+        // grows out of the ground with a little overshoot
+        const k = Math.min(1, (time - a) / 0.55);
         const e = easeOutBack(k);
-        sx = sy = Math.max(0.01, e);
+        sx = 0.8 + 0.2 * Math.min(1.1, e);
+        sy = Math.max(0.01, e);
         if (k >= 1) appear.delete(b.id);
       }
       const u = bounce.get(b.id);
@@ -783,6 +919,7 @@ export function createRenderer({ canvas, game, ui, bus }) {
         drawBuildingDynamicAt(b.type, tier, bx, by, t, b.id * 0.7);
       }
     }
+    while (wi < walkers.length) life.drawWalker(ctx, walkers[wi++], state);
   }
 
   function draw(now) {
@@ -812,10 +949,15 @@ export function createRenderer({ canvas, game, ui, bus }) {
     drawObjects(t);
     mark('objects');
     if (placing) drawGhost(t);
+    life.drawCloudShadows(ctx);
+    if (!reduced) life.drawGulls(ctx, bounds);
     fx.drawWorld(ctx);
     mark('fxWorld');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (!placing) drawSelectionMarker(t);
+    if (!placing) {
+      drawStatuses(t);
+      drawSelectionMarker(t);
+    }
     fx.drawScreen(ctx, worldToScreen);
     if (placing) drawGhostLabel();
     mark('fxScreen');
@@ -877,6 +1019,17 @@ export function createRenderer({ canvas, game, ui, bus }) {
     resize,
     worldToScreen,
     screenToWorld,
+    /** Desktop hover feedback: outline + pointer cursor over clickable things. */
+    setHover(tile) {
+      let next = null;
+      if (tile && state && inBounds(tile.x, tile.y)) {
+        const c = state.tiles[idx(tile.x, tile.y)];
+        if (c === 't' || c === 'r' || buildingAt(state, tile.x, tile.y)) next = tile;
+      }
+      if (next?.x === hover?.x && next?.y === hover?.y) return;
+      hover = next;
+      canvas.style.cursor = hover ? 'pointer' : '';
+    },
     /** Screen position (CSS px) of a tile centre at ground level. */
     tileToScreen(x, y) {
       const c = tileCenter(x, y);

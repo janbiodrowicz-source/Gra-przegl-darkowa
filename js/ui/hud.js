@@ -37,7 +37,7 @@ export function createHud({ onChip, onQuests, onClaim, onSettings }) {
     h('span.qpill__body', null,
       h('span.qpill__line', null, qTitle, qCount),
       h('span.qpill__bar', null, qFill)));
-  const qClaim = h('button.btn.btn--gold.btn--sm.qpill__claim', { type: 'button', onclick: onClaim }, t('ui.claim'));
+  const qClaim = h('button.btn.btn--gold.btn--sm.qpill__claim', { type: 'button', onclick: (e) => onClaim(e.currentTarget) }, t('ui.claim'));
   const qpill = h('div.qpill', null, qMain, qClaim);
 
   const gear = h('button.hud-btn', { type: 'button', 'aria-label': t('ui.settings'), onclick: onSettings, html: icon('gear') });

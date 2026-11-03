@@ -57,6 +57,7 @@ async function boot() {
   const canvas = document.getElementById('map');
   const renderer = createRenderer({ canvas, game, ui, bus });
   ui.setArtProvider((type, level, where) => renderer.thumb(type, level, where));
+  ui.setWorldLocator((x, y) => renderer.tileToScreen(x, y));
   createInput({
     canvas,
     renderer,
@@ -65,9 +66,14 @@ async function boot() {
       if (tile) ui.mapTap(tile.x, tile.y, { pointerType });
     },
     onHover: (sx, sy) => {
-      if (ui.state.mode !== 'place' || sx < 0) return;
-      const tile = renderer.pick(sx, sy, { groundOnly: true });
-      if (tile) ui.mapHover(tile.x, tile.y);
+      if (sx < 0) return renderer.setHover(null);
+      if (ui.state.mode === 'place') {
+        renderer.setHover(null);
+        const tile = renderer.pick(sx, sy, { groundOnly: true });
+        if (tile) ui.mapHover(tile.x, tile.y);
+        return;
+      }
+      renderer.setHover(renderer.pick(sx, sy));
     },
   });
 

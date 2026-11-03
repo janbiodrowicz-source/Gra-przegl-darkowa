@@ -100,9 +100,24 @@ const SUN_ART = `<svg viewBox="0 0 120 70" aria-hidden="true">
 /** "Welcome back" summary of offline progress. */
 export function welcomeDialog({ report, canDouble, onDouble, onClose }) {
   const gains = RESOURCES.filter((k) => report.gained[k] >= 1);
-  const list = h('div.gains', null, gains.map((k) => h(`div.gain.gain--${k}`, null,
-    h('span.gain__ico', { html: icon(k) }),
-    h('span.gain__val', null, `+${fmt(report.gained[k])}`))));
+  const counters = [];
+  const list = h('div.gains', null, gains.map((k) => {
+    const val = h('span.gain__val', null, `+${fmt(report.gained[k])}`);
+    counters.push([val, report.gained[k]]);
+    return h(`div.gain.gain--${k}`, null, h('span.gain__ico', { html: icon(k) }), val);
+  }));
+  // count up from zero (skipped for reduced motion)
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const t0 = performance.now() + 250;
+    const step = (now) => {
+      const k = Math.min(1, Math.max(0, (now - t0) / 900));
+      const e = 1 - Math.pow(1 - k, 3);
+      for (const [el, v] of counters) el.textContent = `+${fmt(v * e)}`;
+      if (k < 1 && list.isConnected !== false) requestAnimationFrame(step);
+    };
+    for (const [el] of counters) el.textContent = '+0';
+    requestAnimationFrame(step);
+  }
   const notes = h('div.notes');
   const fullTimes = CAPPED.map((k) => report.fullAt[k]).filter((v) => v != null);
   const lost = CAPPED.some((k) => report.overflow[k] >= 1);
@@ -197,7 +212,7 @@ export function questsDialog({ game, onClaim }) {
     const unlockNote = unlocks.length
       ? h('div.quest__unlock', null, h('span', { html: icon('lock') }), unlocks.map((b) => t(`b.${b}.name`)).join(', '))
       : null;
-    const claim = h('button.btn.btn--gold.btn--sm', { type: 'button', onclick: () => onClaim(q.id) }, t('ui.claim'));
+    const claim = h('button.btn.btn--gold.btn--sm', { type: 'button', onclick: (e) => onClaim(q.id, e.currentTarget) }, t('ui.claim'));
     const badge = h('span.quest__badge');
     const node = h('div.quest', { dataset: { id: q.id } },
       h('div.quest__top', null, badge, h('div.quest__text', null, title, desc)),

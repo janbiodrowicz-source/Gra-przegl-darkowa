@@ -8,7 +8,7 @@ import { buildCost, canAfford, countType, isUnlocked } from '../core/economy.js'
 import { canPlace, placementPreview } from '../core/actions.js';
 import { getQuest } from '../core/quests.js';
 import { timeToAfford } from '../core/sim.js';
-import { h, setClass, setText } from './dom.js';
+import { h, retrigger, setClass, setText } from './dom.js';
 import { amounts, chip, icon } from './icons.js';
 import { fmt, fmtClock, fmtPct } from './format.js';
 
@@ -66,6 +66,9 @@ export function createBuildBar({ onCard, onConfirm, onCancel, artFor }) {
       }
       setClass(c.el, 'is-locked', !unlocked);
       setClass(c.el, 'is-poor', unlocked && !afford);
+      // a little "pop" the moment a building becomes affordable
+      if (c.wasAffordable === false && afford) retrigger(c.el, 'is-ready');
+      c.wasAffordable = afford;
       setClass(c.el, 'is-active', ui.mode === 'place' && ui.placing === type);
       setClass(c.el, 'is-new', unlocked && !!state.flags.hints[`new_${type}`]);
       const n = countType(state, type);

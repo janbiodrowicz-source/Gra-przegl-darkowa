@@ -213,8 +213,9 @@ export function chip(name, text) {
 }
 
 /** SVG markup as a data URL (lets the canvas draw the very same icons). */
-export function iconDataUrl(name, size = 48) {
-  const markup = icon(name).replace('<svg ', `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" `);
+export function iconDataUrl(name, size = 48, color = null) {
+  let markup = icon(name).replace('<svg ', `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" `);
+  if (color) markup = markup.replaceAll('currentColor', color);
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
 }
 

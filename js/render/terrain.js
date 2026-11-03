@@ -18,6 +18,19 @@ export function groundKey(tiles) {
   return k;
 }
 
+/** Coast edges whose cliff faces are visible (world coords at sea level): [ax, ay, bx, by][]. */
+export function coastSegments(tiles) {
+  const out = [];
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      if (groundCode(tiles, x, y) === 'w') continue;
+      if (groundCode(tiles, x + 1, y) === 'w') out.push([SX(x + 1, y + 1), SY(x + 1, y + 1, -CLIFF), SX(x + 1, y), SY(x + 1, y, -CLIFF)]);
+      if (groundCode(tiles, x, y + 1) === 'w') out.push([SX(x, y + 1), SY(x, y + 1, -CLIFF), SX(x + 1, y + 1), SY(x + 1, y + 1, -CLIFF)]);
+    }
+  }
+  return out;
+}
+
 /** World-space bounding box of the island including halo and cliffs. */
 export function islandBounds(tiles, margin = 46) {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;

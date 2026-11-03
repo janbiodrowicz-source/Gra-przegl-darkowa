@@ -772,6 +772,44 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
 .quest.is-locked .quest__bottom .btn,
 .quest.is-locked .quest__progress { display: none; }
 
+/* ---------------------------------------------------------------- juice */
+
+.fly {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 46;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 2px 2px rgba(40, 26, 16, 0.35));
+}
+.fly .ico { width: 26px; height: 26px; }
+.confetti {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 46;
+  width: 8px;
+  height: 6px;
+  margin: -3px 0 0 -4px;
+  border-radius: 2px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.res.is-bump, .qpill.is-bump { animation: bump 0.32s var(--ease-spring); }
+.res.is-bump .res__ico { animation: bump 0.32s var(--ease-spring); }
+.card.is-ready { animation: ready 0.55s var(--ease-spring); }
+.card.is-shake { animation: shake 0.35s; }
+@keyframes ready {
+  0% { scale: 1; box-shadow: inset 0 -3px 0 var(--c-paper-3), 0 0 0 0 rgba(19, 160, 147, 0.6); }
+  40% { scale: 1.07; box-shadow: inset 0 -3px 0 var(--c-paper-3), 0 0 0 6px rgba(19, 160, 147, 0.25); }
+  100% { scale: 1; box-shadow: inset 0 -3px 0 var(--c-paper-3), 0 0 0 10px rgba(19, 160, 147, 0); }
+}
+.modal--welcome .modal__art svg { animation: bob 3.2s ease-in-out infinite; }
+
 /* ----------------------------------------------------------- animations */
 
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
