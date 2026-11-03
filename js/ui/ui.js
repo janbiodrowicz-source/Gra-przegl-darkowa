@@ -151,11 +151,11 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     update();
   }
 
-  function moveGhost(x, y) {
+  function moveGhost(x, y, silent = false) {
     if (ui.mode !== 'place') return;
     if (ui.ghost && ui.ghost.x === x && ui.ghost.y === y) return;
     ui.ghost = { x, y };
-    sfx.tick();
+    if (!silent) sfx.tick();
     update();
   }
 
@@ -180,7 +180,51 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     update();
   }
 
-  /** Map tap (wired by the renderer/input in stage c). */
+  /**
+   * Tap on the map. While placing: mouse clicks build right away; on touch the
+   * first tap moves the ghost and a second tap on the same tile (or ✓) builds.
+   */
+  function mapTap(x, y, { pointerType = 'touch' } = {}) {
+    hideTip();
+    if (ui.mode === 'place') {
+      if (!inBounds(x, y)) return;
+      const same = ui.ghost && ui.ghost.x === x && ui.ghost.y === y;
+      if (pointerType === 'mouse' || same) {
+        moveGhost(x, y, true);
+        confirmPlacement();
+      } else {
+        moveGhost(x, y);
+      }
+      return;
+    }
+    tapTile(x, y);
+  }
+
+  /** Desktop: the ghost follows the mouse. */
+  function mapHover(x, y) {
+    if (ui.mode !== 'place' || !inBounds(x, y)) return;
+    moveGhost(x, y, true);
+  }
+
+  /** Screen area not covered by the HUD, bottom bar or the open panel (CSS px, layout boxes). */
+  function safeArea() {
+    const W = root.clientWidth || innerWidth;
+    const H = root.clientHeight || innerHeight;
+    if (!parts) return { top: 0, bottom: H, left: 0, right: W };
+    const hud = parts.hud.el;
+    let top = hud.offsetTop + hud.offsetHeight;
+    let bottom = parts.bar.el.offsetTop;
+    let right = W;
+    if (parts.panel.target) {
+      const p = parts.panel.el;
+      const side = p.offsetLeft > W * 0.35 && p.offsetWidth < W * 0.65;
+      if (side) right = p.offsetLeft;
+      else bottom = Math.min(bottom, p.offsetTop);
+    }
+    return { top: top + 4, bottom: bottom - 4, left: 4, right: right - 4 };
+  }
+
+  /** Selection by tile (buildings, trees, rocks). */
   function tapTile(x, y) {
     if (ui.mode === 'place') {
       if (inBounds(x, y)) moveGhost(x, y);
@@ -412,6 +456,9 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     update,
     toast,
     tapTile,
+    mapTap,
+    mapHover,
+    safeArea,
     moveGhost,
     startPlacement,
     confirmPlacement,

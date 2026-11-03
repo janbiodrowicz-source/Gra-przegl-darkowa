@@ -7,6 +7,8 @@ import { Game } from './game.js';
 import { setLang, t } from './i18n.js';
 import * as audio from './audio/sfx.js';
 import { createUI } from './ui/ui.js';
+import { createRenderer } from './render/renderer.js';
+import { createInput } from './input.js';
 
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
@@ -52,6 +54,23 @@ async function boot() {
 
   const ui = createUI({ game, bus, sfx: audio.sfx, audio, platform });
 
+  const canvas = document.getElementById('map');
+  const renderer = createRenderer({ canvas, game, ui, bus });
+  ui.setArtProvider((type, level, where) => renderer.thumb(type, level, where));
+  createInput({
+    canvas,
+    renderer,
+    onTap: (sx, sy, pointerType) => {
+      const tile = renderer.pick(sx, sy, { groundOnly: ui.state.mode === 'place' });
+      if (tile) ui.mapTap(tile.x, tile.y, { pointerType });
+    },
+    onHover: (sx, sy) => {
+      if (ui.state.mode !== 'place' || sx < 0) return;
+      const tile = renderer.pick(sx, sy, { groundOnly: true });
+      if (tile) ui.mapHover(tile.x, tile.y);
+    },
+  });
+
   if (DEBUG) {
     const { mountDebug } = await import('./dev/debug.js');
     mountDebug(game, { collapsed: true });
@@ -59,6 +78,7 @@ async function boot() {
   if (DEBUG || TEST) {
     window.__game = game;
     window.__ui = ui;
+    window.__renderer = renderer;
   }
 
   game.start();

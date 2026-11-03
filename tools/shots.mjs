@@ -184,6 +184,102 @@ export const SCENARIOS = {
       return { placed: true, claimed: true, keyboard: true, lang: true, reset: true };
     },
   },
+  mapclick: {
+    path: '?test',
+    fresh: true,
+    async run(page, context) {
+      await wait(page, 1000);
+      const touch = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+      const tap = async (x, y) => (touch ? page.touchscreen.tap(x, y) : page.mouse.click(x, y));
+      const tileXY = (x, y) => game(page, ([tx, ty]) => window.__renderer.tileToScreen(tx, ty), [x, y]);
+      const sel = () => game(page, () => window.__ui.state.selected);
+      // 1) tap the start hut
+      const hut = await game(page, () => window.__game.state.buildings[0]);
+      const [hx, hy] = await tileXY(hut.x, hut.y);
+      await tap(hx, hy - 10);
+      await wait(page, 300);
+      const s1 = await sel();
+      if (!s1 || s1.kind !== 'building') throw new Error(`hut not selected: ${JSON.stringify(s1)}`);
+      // 2) tap a tree
+      const tree = await game(page, () => {
+        // a tree far from the hut, with nothing standing in front of it
+        const s = window.__game.state; const n = Math.sqrt(s.tiles.length); const h = s.buildings[0];
+        let best = null, bestD = -1;
+        for (let i = 0; i < s.tiles.length; i++) {
+          if (s.tiles[i] !== 't') continue;
+          const x = i % n, y = Math.floor(i / n);
+          const front = [[1, 0], [0, 1], [1, 1]].some(([dx, dy]) => 'tr'.includes(s.tiles[(y + dy) * n + x + dx]));
+          const [sx, sy] = window.__renderer.tileToScreen(x, y);
+          const visible = sx > 40 && sx < innerWidth - 40 && sy > 160 && sy < innerHeight - 160;
+          const d = Math.hypot(x - h.x, y - h.y);
+          if (!front && visible && d > bestD) { bestD = d; best = { x, y }; }
+        }
+        return best;
+      });
+      const [tx, ty] = await tileXY(tree.x, tree.y);
+      await tap(tx, ty - 12);
+      await wait(page, 600);
+      const s2 = await sel();
+      if (!s2 || s2.kind !== 'tile') throw new Error(`tree not selected: ${JSON.stringify(s2)}`);
+      // close the panel
+      await page.click('.panel__close');
+      await wait(page, 450);
+      // 3) placement through the map
+      const before = await game(page, () => window.__game.state.buildings.length);
+      await page.click('.card[data-type="field"]');
+      await wait(page, 900); // the camera may zoom in to a finger-friendly size first
+      const spot = await game(page, async () => {
+        const { canPlace } = await import('/js/core/actions.js');
+        const s = window.__game.state; const n = Math.sqrt(s.tiles.length); const g = window.__ui.state.ghost;
+        for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+          if ((x !== g.x || y !== g.y) && canPlace(s, 'field', x, y).ok) {
+            const [sx, sy] = window.__renderer.tileToScreen(x, y);
+            if (sx > 40 && sx < innerWidth - 40 && sy > 140 && sy < innerHeight - 160) return { x, y };
+          }
+        }
+        return null;
+      });
+      const [px, py] = await tileXY(spot.x, spot.y);
+      await tap(px, py);
+      await wait(page, 250);
+      if (touch) {
+        const g = await game(page, () => window.__ui.state.ghost);
+        if (g.x !== spot.x || g.y !== spot.y) throw new Error('ghost did not move on tap');
+        await tap(px, py); // second tap on the same tile builds
+        await wait(page, 250);
+      }
+      const after = await game(page, () => window.__game.state.buildings.length);
+      const placedAt = await game(page, () => { const b = window.__game.state.buildings.at(-1); return { x: b.x, y: b.y, type: b.type }; });
+      if (after !== before + 1 || placedAt.x !== spot.x || placedAt.y !== spot.y) throw new Error(`placement via map failed ${JSON.stringify(placedAt)} vs ${JSON.stringify(spot)}`);
+      // 4) drag pans the camera
+      const cam0 = await game(page, () => ({ x: window.__renderer.cam.x, y: window.__renderer.cam.y, z: window.__renderer.cam.zoom }));
+      const vw = page.viewportSize().width, vh = page.viewportSize().height;
+      if (touch) {
+        const cdp = await context.newCDPSession(page);
+        const pt = (x, y) => [{ x, y, id: 1 }];
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt(vw / 2, vh / 2) });
+        for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(vw / 2 - i * 12, vh / 2 - i * 6) });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        // pinch zoom with two fingers
+        const two = (d) => [{ x: vw / 2 - d, y: vh / 2, id: 1 }, { x: vw / 2 + d, y: vh / 2, id: 2 }];
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: two(40) });
+        for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: two(40 + i * 10) });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      } else {
+        await page.mouse.move(vw / 2, vh / 2);
+        await page.mouse.down();
+        for (let i = 1; i <= 8; i++) await page.mouse.move(vw / 2 - i * 12, vh / 2 - i * 6);
+        await page.mouse.up();
+        await page.mouse.move(vw / 2, vh / 2);
+        await page.mouse.wheel(0, -400);
+      }
+      await wait(page, 400);
+      const cam1 = await game(page, () => ({ x: window.__renderer.cam.x, y: window.__renderer.cam.y, z: window.__renderer.cam.zoom }));
+      if (Math.abs(cam1.x - cam0.x) < 5 && Math.abs(cam1.y - cam0.y) < 5) throw new Error('drag did not pan');
+      if (!(cam1.z > cam0.z * 1.1)) throw new Error(`zoom did not change ${cam0.z} → ${cam1.z}`);
+      return { selectHut: true, selectTree: true, placed: spot, panned: true, zoom: +(cam1.z / cam0.z).toFixed(2) };
+    },
+  },
   offline: {
     path: '?test',
     fresh: true,

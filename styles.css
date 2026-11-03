@@ -99,7 +99,9 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
   height: 100%;
   touch-action: none;
   display: block;
+  cursor: default;
 }
+#map.is-dragging { cursor: grabbing; }
 
 .ico { width: 24px; height: 24px; display: block; }
 [hidden], .is-hidden { display: none !important; }
@@ -334,7 +336,7 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
 }
 .qpill__claim { display: none; }
 .qpill { container-type: inline-size; }
-@container (max-width: 230px) {
+@container (max-width: 170px) {
   .qpill__title { display: none; }
   .qpill.is-done .qpill__body { display: none; }
   .qpill.is-done .qpill__main { flex: 0 0 auto; }
