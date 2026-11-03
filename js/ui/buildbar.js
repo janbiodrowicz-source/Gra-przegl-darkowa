@@ -30,6 +30,7 @@ export function createBuildBar({ onCard, onConfirm, onCancel, artFor }) {
     const el = h('button.card', { type: 'button', dataset: { type }, 'aria-label': t(`b.${type}.name`), onclick: () => onCard(type) },
       count,
       h('span.card__new', null, t('ui.newBadge')),
+      h('span.card__hand', { html: icon('hand') }),
       eta,
       art,
       h('span.card__lock', { html: icon('lock') }),
@@ -71,6 +72,7 @@ export function createBuildBar({ onCard, onConfirm, onCancel, artFor }) {
       c.wasAffordable = afford;
       setClass(c.el, 'is-active', ui.mode === 'place' && ui.placing === type);
       setClass(c.el, 'is-new', unlocked && !!state.flags.hints[`new_${type}`]);
+      setClass(c.el, 'is-hinted', ui.hintCard === type && afford && ui.mode !== 'place');
       const n = countType(state, type);
       setText(c.count, n ? `×${n}` : '');
       if (unlocked && !afford) {

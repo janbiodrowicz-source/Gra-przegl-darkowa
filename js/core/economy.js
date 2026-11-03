@@ -184,7 +184,11 @@ export function capsOf(state) {
   let extra = 0;
   for (const b of state.buildings) extra += storageOf(b.type, b.level);
   const caps = {};
-  for (const k of RESOURCES) caps[k] = CAPPED.includes(k) ? BALANCE.baseCap + extra : Infinity;
+  for (const k of RESOURCES) {
+    if (!CAPPED.includes(k)) caps[k] = Infinity;
+    else if (k === 'coins') caps[k] = BALANCE.coinCap + extra * BALANCE.coinCapPerStorage;
+    else caps[k] = BALANCE.baseCap + extra;
+  }
   return caps;
 }
 

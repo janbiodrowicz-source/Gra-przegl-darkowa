@@ -96,6 +96,7 @@ const UI = {
     <path d="M5 20.5a7 7 0 0 1 14 0z" fill="currentColor"/>`,
   home: `<path d="M4.5 11 12 4.5l7.5 6.5M6.8 9.4v9.8h10.4V9.4" ${S} stroke-width="2.2"/><path d="M10.2 19.2v-5h3.6v5" ${S} stroke-width="2"/>`,
   box: `<path d="M4.5 8 12 4.5 19.5 8v8.5L12 20l-7.5-3.5z" ${S} stroke-width="2"/><path d="M4.5 8 12 11.5 19.5 8M12 11.5V20" ${S} stroke-width="2"/>`,
+  hand: `<path d="M9.4 21.2c-1.8 0-3.2-1.3-3.6-3l-1.4-5a1.5 1.5 0 0 1 2.8-1l1 1.9V5.4a1.6 1.6 0 0 1 3.2 0v5.4h.3V9a1.6 1.6 0 0 1 3.2 0v1.8h.3V10a1.6 1.6 0 0 1 3.2 0v1h.1a1.5 1.5 0 0 1 3 0v4.4c0 3.2-2.6 5.8-5.8 5.8z" fill="#fffaf0" stroke="#3b2a20" stroke-width="1.5" stroke-linejoin="round"/>`,
   chevron: `<path d="M9.5 6l6 6-6 6" ${S} stroke-width="2.6"/>`,
   bolt: `<path d="M13.5 2.8 5.8 13.2h5.1l-1.4 8 7.7-10.4h-5.1z" fill="currentColor"/>`,
   leaf: `<path d="M5 19C5 10 10.5 5 19.5 4.5 19 13.5 14 19 5 19z" fill="currentColor"/><path d="M5 19 13 11" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>`,

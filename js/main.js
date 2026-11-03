@@ -99,6 +99,7 @@ async function boot() {
     if (loaded.status === 'newer') ui.toast(t('toast.loadNewer'), { kind: 'warn', icon: 'warn', ms: 6000 });
     if (!platform.storage.persistent) ui.toast(t('toast.saveFailed'), { kind: 'warn', icon: 'warn', ms: 5200 });
     if (game.lastReport) ui.showWelcome(game.lastReport);
+    if (loaded.status === 'new') ui.welcome();
   }
 }
 

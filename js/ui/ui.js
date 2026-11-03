@@ -3,9 +3,9 @@
  * builds the DOM components, refreshes them ~10×/s, reacts to game events
  * and exposes a small API for the map/input layer (stage c).
  */
-import { BALANCE, BUILDING_ORDER } from '../config.js';
+import { BALANCE, BUILDING_ORDER, QUESTS } from '../config.js';
 import { onLangChange, setLang, t } from '../i18n.js';
-import { buildCost, buildingAt, canAfford } from '../core/economy.js';
+import { buildCost, buildingAt, canAfford, countType, isUnlocked } from '../core/economy.js';
 import { suggestSpot } from '../core/actions.js';
 import { getRates } from '../core/sim.js';
 import { currentQuest } from '../core/quests.js';
@@ -79,10 +79,21 @@ export function createUI({ game, bus, sfx, audio, platform }) {
 
   /* ---------------- refresh ---------------- */
 
+  /** Early quests point at the card to tap (a little hand), until it is built. */
+  function hintCard(s) {
+    const q = currentQuest(s);
+    if (!q || s.quests[q.id] !== 'active' || q.goal.type !== 'have' || QUESTS.indexOf(q) > 2) return null;
+    for (const [type, n] of Object.entries(q.goal.buildings)) {
+      if (countType(s, type) < n && isUnlocked(s, type)) return type;
+    }
+    return null;
+  }
+
   function update() {
     if (!parts) return;
     const s = game.state;
     const r = rates();
+    ui.hintCard = hintCard(s);
     parts.hud.update(s, r);
     parts.bar.update(s, r, ui);
     parts.panel.update(s, r);
@@ -106,6 +117,13 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     const why = parts.bar.whyNot(game.state, rates(), type);
     if (why) {
       sfx.error();
+      // the first time wood is short: tell the player that trees can be chopped
+      const st = game.state;
+      if (why.reason === 'cost' && !st.flags.hints.chopTip && st.tiles.includes('t')
+        && (buildCost(st, type).wood ?? 0) > st.res.wood) {
+        game.dispatch('setHint', 'chopTip');
+        setTimeout(() => toast(t('toast.chopTip'), { kind: 'info', icon: 'axe', ms: 5200 }), 400);
+      }
       const card = parts.bar.cards[type]?.el;
       if (card) retrigger(card, 'is-shake');
       toast(why.text, { kind: why.reason === 'locked' ? 'info' : 'warn', icon: why.reason === 'locked' ? 'lock' : 'clock' });
@@ -435,6 +453,16 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     sfx.quest();
     platform.happyTime();
   });
+  bus.on('questActivated', (e) => {
+    setTimeout(() => {
+      toast(t('toast.newQuest', { name: t(`q.${e.id}.title`) }), { kind: 'info', icon: 'quest', ms: 3200 });
+      const q = QUESTS.find((x) => x.id === e.id);
+      if (q?.goal.type === 'level' && !game.state.flags.hints.upgradeTip) {
+        game.dispatch('setHint', 'upgradeTip');
+        setTimeout(() => toast(t('toast.upgradeTip'), { kind: 'info', icon: 'up', ms: 5200 }), 1400);
+      }
+    }, 900);
+  });
   bus.on('unlocked', (e) => {
     game.dispatch('setHint', `new_${e.building}`);
     toast(t('toast.unlocked', { name: name(e.building) }), { kind: 'good', icon: e.building, ms: 3600 });
@@ -498,6 +526,10 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     openQuests,
     openSettings,
     showWelcome,
+    /** First-run greeting. */
+    welcome() {
+      setTimeout(() => toast(t('toast.welcome'), { kind: 'good', icon: 'field', ms: 5200 }), 700);
+    },
     /** Lets the renderer tell where a tile is on screen (for flying rewards). */
     setWorldLocator(fn) {
       locate = fn;

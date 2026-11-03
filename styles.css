@@ -181,7 +181,7 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
 .btn--danger { --btn-bg: #fde6e1; --btn-fg: #a8321f; --btn-edge: #efb8ad; }
 .btn--round { width: 56px; min-height: 56px; padding: 0; border-radius: 50%; flex: 0 0 auto; }
 .btn--round .ico { width: 26px; height: 26px; }
-.btn--sm { min-height: 36px; padding: 0 12px; font-size: 13.5px; border-radius: 12px; box-shadow: 0 3px 0 var(--btn-edge); }
+.btn--sm { min-height: 44px; padding: 0 12px; font-size: 13.5px; border-radius: 12px; box-shadow: 0 3px 0 var(--btn-edge); }
 .btn--block { width: 100%; }
 .btn--wide { min-width: 160px; }
 .btn[disabled] { filter: grayscale(0.55); opacity: 0.5; cursor: default; }
@@ -356,7 +356,7 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
   -webkit-box-orient: vertical;
   line-height: 1.15;
 }
-.qpill__claim { padding: 0 10px; }
+.qpill__claim { padding: 0 10px; min-height: 42px; }
 .qpill.is-done .qpill__claim { display: inline-flex; }
 .qpill.is-done .qpill__count { display: none; }
 .qpill.is-complete .qpill__bar { display: none; }
@@ -500,6 +500,24 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
   animation: wiggle 2.4s ease-in-out infinite;
 }
 .card.is-new .card__new { display: block; }
+.card__hand {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  display: none;
+  pointer-events: none;
+  rotate: 180deg;
+  filter: drop-shadow(0 2px 2px rgba(40, 26, 16, 0.3));
+  animation: point 1s ease-in-out infinite;
+}
+.card__hand .ico { width: 34px; height: 34px; }
+.card.is-hinted { background: #fff4d2; box-shadow: inset 0 0 0 2.5px #f2c14e, 0 6px 14px rgba(242, 193, 78, 0.35); }
+.card.is-hinted .card__hand { display: block; }
+.buildbar__track:has(.card.is-hinted) { padding-top: 34px; margin-top: -34px; }
+@keyframes point { 0%, 100% { translate: 0 0; } 50% { translate: 0 6px; } }
 .card.is-new.is-poor .card__eta { display: none; }
 
 /* placement bar */
@@ -709,8 +727,8 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
 
 .switch {
   position: relative;
-  width: 64px;
-  height: 38px;
+  width: 68px;
+  height: 44px;
   flex: 0 0 auto;
   border: 0;
   border-radius: 999px;
@@ -722,18 +740,18 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
   position: absolute;
   top: 4px;
   left: 4px;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 2px 4px rgba(59, 42, 32, 0.25);
   transition: transform 0.25s var(--ease-spring);
 }
 .switch[aria-checked="true"] { background: var(--c-accent); }
-.switch[aria-checked="true"] .switch__knob { transform: translateX(26px); }
+.switch[aria-checked="true"] .switch__knob { transform: translateX(24px); }
 
 .seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--c-paper-3); }
-.seg button { min-width: 56px; min-height: 40px; border: 0; border-radius: 10px; background: transparent; font-weight: 900; font-size: 14px; color: var(--c-ink-2); cursor: pointer; }
+.seg button { min-width: 56px; min-height: 44px; border: 0; border-radius: 10px; background: transparent; font-weight: 900; font-size: 14px; color: var(--c-ink-2); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--c-paper); color: var(--c-ink); box-shadow: 0 2px 0 rgba(150, 105, 60, 0.25); }
 
 .hold { overflow: hidden; }

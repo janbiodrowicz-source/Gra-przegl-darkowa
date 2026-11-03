@@ -34,18 +34,20 @@ export const MAP = Object.freeze({
 
 /** Resources in HUD order. */
 export const RESOURCES = Object.freeze(['wood', 'stone', 'food', 'coins']);
-/** Resources limited by storage. */
-export const CAPPED = Object.freeze(['wood', 'stone', 'food']);
+/** Resources limited by storage (coins too — otherwise a night offline would make them meaningless). */
+export const CAPPED = Object.freeze(['wood', 'stone', 'food', 'coins']);
 
 export const BALANCE = Object.freeze({
-  startRes: Object.freeze({ wood: 50, stone: 15, food: 30, coins: 0 }),
+  startRes: Object.freeze({ wood: 40, stone: 10, food: 20, coins: 0 }),
   startPop: 2,
-  baseCap: 150,            // wood/stone/food limit without warehouses
+  baseCap: 140,            // wood/stone/food limit without warehouses
+  coinCap: 500,            // treasury limit without warehouses
+  coinCapPerStorage: 2,    // each point of warehouse storage adds this many coins of room
   foodPerPerson: 0.1,      // food eaten by one resident per second
-  popGrowth: 0.2,          // residents arriving per second (free housing + food needed)
+  popGrowth: 0.08,         // residents arriving per second (free housing + food needed)
   hungerPenalty: 0.5,      // max production loss when the granary is empty (0.5 = −50 %)
-  taxPerPerson: 0.02,      // coins per resident per second
-  gatherWood: 0.1,         // brushwood collected by villagers, always on [wood/s]
+  taxPerPerson: 0.01,      // coins per resident per second
+  gatherWood: 0.2,         // brushwood collected by villagers, always on [wood/s]
   refund: 0.5,             // share of everything spent that demolition returns
   costGrowth: 1.15,        // each next building of the same type costs ×1.15
   upgradeGrowth: 1.15,     // each next level costs ×1.15
@@ -71,42 +73,42 @@ export const BALANCE = Object.freeze({
  */
 export const BUILDINGS = Object.freeze({
   hut: Object.freeze({
-    cost: { wood: 20 },
-    upgrade: { wood: 25, stone: 10, coins: 5 },
+    cost: { wood: 32 },
+    upgrade: { wood: 35, stone: 20, coins: 55 },
     housing: 4, housingPerLevel: 2,
   }),
   field: Object.freeze({
     cost: { wood: 15 },
-    upgrade: { wood: 20, coins: 5 },
-    produce: { food: 0.7 },
+    upgrade: { wood: 30, stone: 10, coins: 50 },
+    produce: { food: 0.45 },
     workers: 1, workersPerLevel: 1,
     adjacency: { kind: 'water', bonus: 0.1 },
   }),
   sawmill: Object.freeze({
-    cost: { wood: 30, stone: 5 },
-    upgrade: { wood: 30, stone: 15, coins: 8 },
-    produce: { wood: 0.6 },
+    cost: { wood: 35, stone: 5 },
+    upgrade: { wood: 40, stone: 25, coins: 55 },
+    produce: { wood: 0.4 },
     workers: 2, workersPerLevel: 1,
     adjacency: { kind: 'tree', bonus: 0.1 },
   }),
   quarry: Object.freeze({
-    cost: { wood: 40 },
-    upgrade: { wood: 40, stone: 10, coins: 8 },
-    produce: { stone: 0.5 },
+    cost: { wood: 45 },
+    upgrade: { wood: 50, stone: 15, coins: 55 },
+    produce: { stone: 0.25 },
     workers: 2, workersPerLevel: 1,
     adjacency: { kind: 'rock', bonus: 0.15 },
   }),
   market: Object.freeze({
-    cost: { wood: 60, stone: 40 },
-    upgrade: { wood: 50, stone: 40, coins: 10 },
-    produce: { coins: 0.4 },
+    cost: { wood: 80, stone: 50 },
+    upgrade: { wood: 60, stone: 50, coins: 70 },
+    produce: { coins: 0.25 },
     workers: 2, workersPerLevel: 1,
     adjacency: { kind: 'hut', bonus: 0.1 },
     unlock: 'q3',
   }),
   warehouse: Object.freeze({
-    cost: { wood: 60, stone: 60 },
-    upgrade: { wood: 60, stone: 60, coins: 15 },
+    cost: { wood: 70, stone: 70 },
+    upgrade: { wood: 80, stone: 80, coins: 80 },
     storage: 150, storagePerLevel: 100,
     unlock: 'q4',
   }),
@@ -125,11 +127,11 @@ export const BUILDING_ORDER = Object.freeze(['hut', 'field', 'sawmill', 'quarry'
  *   resource { res, amount }                 – hold that much of a resource
  */
 export const QUESTS = Object.freeze([
-  Object.freeze({ id: 'q1', goal: { type: 'have', buildings: { field: 1 } }, reward: { wood: 25 } }),
-  Object.freeze({ id: 'q2', goal: { type: 'have', buildings: { sawmill: 1, quarry: 1 } }, reward: { wood: 20, stone: 15 } }),
-  Object.freeze({ id: 'q3', goal: { type: 'have', buildings: { hut: 3 } }, reward: { wood: 30, stone: 20 } }),
-  Object.freeze({ id: 'q4', goal: { type: 'pop', count: 12 }, reward: { coins: 40 } }),
-  Object.freeze({ id: 'q5', goal: { type: 'level', level: 3 }, reward: { coins: 100 } }),
+  Object.freeze({ id: 'q1', goal: { type: 'have', buildings: { field: 1 } }, reward: { wood: 20 } }),
+  Object.freeze({ id: 'q2', goal: { type: 'have', buildings: { sawmill: 1, quarry: 1 } }, reward: { wood: 25, stone: 10 } }),
+  Object.freeze({ id: 'q3', goal: { type: 'have', buildings: { hut: 4 } }, reward: { wood: 40, stone: 25 } }),
+  Object.freeze({ id: 'q4', goal: { type: 'level', level: 2 }, reward: { coins: 50 } }),
+  Object.freeze({ id: 'q5', goal: { type: 'pop', count: 30 }, reward: { coins: 200 } }),
 ]);
 
 /** Prestige is only a hook for now (see js/core/prestige.js). */

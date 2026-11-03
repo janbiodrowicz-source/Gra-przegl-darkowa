@@ -42,7 +42,7 @@ export function buildDemoState(seed = 20261103) {
   }
 
   const caps = capsOf(s);
-  s.res = { wood: Math.round(caps.wood * 0.72), stone: Math.round(caps.stone * 0.46), food: Math.round(caps.food * 0.61), coins: 1260 };
+  s.res = { wood: Math.round(caps.wood * 0.72), stone: Math.round(caps.stone * 0.46), food: Math.round(caps.food * 0.61), coins: Math.round(caps.coins * 0.55) };
   s.pop = popCapOf(s) - 1;
   s.stats.maxPop = s.pop;
   s.time = 15 * 60;

@@ -2,7 +2,7 @@
  * Top HUD: resource chips (value, rate, storage bar), population,
  * the current quest pill and the settings button.
  */
-import { BALANCE, RESOURCES } from '../config.js';
+import { BALANCE, CAPPED, RESOURCES } from '../config.js';
 import { t } from '../i18n.js';
 import { currentQuest, questProgress } from '../core/quests.js';
 import { h, setClass, setText, setVar } from './dom.js';
@@ -16,7 +16,7 @@ export function createHud({ onChip, onQuests, onClaim, onSettings }) {
     const val = h('span.res__val');
     const rate = h('span.res__rate');
     const fill = h('i');
-    const capped = key === 'wood' || key === 'stone' || key === 'food';
+    const capped = CAPPED.includes(key);
     const el = h(`button.res.res--${key}`, {
       type: 'button',
       'aria-label': t(`res.${key}`),

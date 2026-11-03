@@ -110,15 +110,16 @@ test('new game: start hut, resources, first quest active', () => {
 
 test('build costs grow ×1.15 per owned building (rounded up)', () => {
   const s = createState({ seed: 42 });
-  assert.deepEqual(eco.buildCost(s, 'field'), { wood: 15 });
+  const base = BUILDINGS.field.cost.wood;
+  assert.deepEqual(eco.buildCost(s, 'field'), { wood: base });
   const spot = freeTile(s);
   place(s, 'field', spot.x, spot.y);
-  assert.deepEqual(eco.buildCost(s, 'field'), { wood: Math.ceil(15 * 1.15) });
+  assert.deepEqual(eco.buildCost(s, 'field'), { wood: Math.ceil(base * 1.15 - 1e-9) });
   const spot2 = freeTile(s);
   place(s, 'field', spot2.x, spot2.y);
-  assert.deepEqual(eco.buildCost(s, 'field'), { wood: Math.ceil(15 * 1.15 * 1.15) });
+  assert.deepEqual(eco.buildCost(s, 'field'), { wood: Math.ceil(base * 1.15 * 1.15 - 1e-9) });
   // the free start hut counts as owned
-  assert.deepEqual(eco.buildCost(s, 'hut'), { wood: Math.ceil(20 * 1.15) });
+  assert.deepEqual(eco.buildCost(s, 'hut'), { wood: Math.ceil(BUILDINGS.hut.cost.wood * 1.15) });
 });
 
 test('upgrade costs grow ×1.15 per level and stop at max level', () => {
@@ -241,10 +242,10 @@ test('production matches rates (field + sawmill, fed town)', () => {
   const d = derive(s);
   const fieldRate = d.per.get(field.id).rate.food;
   const sawRate = d.per.get(saw.id).rate.wood;
-  assert.ok(near(fieldRate, 0.7 * (1 + eco.adjacencyBonus(s, 'field', b.x, b.y))));
+  assert.ok(near(fieldRate, BUILDINGS.field.produce.food * (1 + eco.adjacencyBonus(s, 'field', b.x, b.y))));
   run(s, 10);
   assert.ok(near(s.res.wood, (sawRate + BALANCE.gatherWood) * 10, 1e-6), `wood ${s.res.wood}`);
-  assert.ok(near(s.res.food, 100 + (fieldRate - 0.4) * 10, 1e-6), `food ${s.res.food}`);
+  assert.ok(near(s.res.food, 100 + (fieldRate - 4 * BALANCE.foodPerPerson) * 10, 1e-6), `food ${s.res.food}`);
 });
 
 test('hunger halves production (fields excluded) and stops growth', () => {
@@ -270,8 +271,8 @@ test('population grows into free housing', () => {
   s.pop = 2;
   s.res.food = 100;
   run(s, 5);
-  assert.ok(near(s.pop, 3, 1e-6), `pop ${s.pop}`);
-  run(s, 20);
+  assert.ok(near(s.pop, 2 + 5 * BALANCE.popGrowth, 1e-6), `pop ${s.pop}`);
+  run(s, 2 / BALANCE.popGrowth + 5);
   assert.equal(s.pop, 4);
 });
 
@@ -355,7 +356,7 @@ test('quest chain: progress, claim, rewards, unlocks', () => {
   const wood = s.res.wood;
   const r = actions.claimQuest(s, 'q1');
   assert.ok(r.ok);
-  assert.equal(s.res.wood, wood + 25);
+  assert.equal(s.res.wood, wood + QUESTS[0].reward.wood);
   assert.equal(s.quests.q1, 'claimed');
   assert.equal(s.quests.q2, 'active');
   assert.deepEqual(questProgress(s, QUESTS[1]), { cur: 0, max: 2 });
