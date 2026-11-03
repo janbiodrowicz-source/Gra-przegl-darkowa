@@ -86,7 +86,7 @@ export function createHud({ onChip, onQuests, onClaim, onSettings }) {
       setClass(qClaim, 'is-pulsing', done);
       setClass(qpill, 'is-complete', false);
     } else {
-      setText(qTitle, t('ui.allDone'));
+      setText(qTitle, t('ui.allDoneShort'));
       setText(qCount, '');
       setVar(qFill, '--p', 1);
       setClass(qpill, 'is-done', false);

@@ -112,6 +112,7 @@ export default {
   'ui.idle': 'Bez pracy',
   'ui.jobs': 'Etaty',
   'ui.allDone': 'Wszystkie zadania ukończone! Więcej już wkrótce.',
+  'ui.allDoneShort': 'Wszystko gotowe! 🎉',
   'ui.questNext': 'Kolejne zadanie pojawi się po odebraniu nagrody.',
   'ui.newBadge': 'NOWE',
   'ui.placeHint': 'Dotknij pola, by przesunąć. ✓ stawia budynek.',

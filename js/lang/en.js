@@ -112,6 +112,7 @@ export default {
   'ui.idle': 'Idle',
   'ui.jobs': 'Jobs',
   'ui.allDone': 'All quests complete! More coming soon.',
+  'ui.allDoneShort': 'All done! 🎉',
   'ui.questNext': 'The next quest appears once you claim the reward.',
   'ui.newBadge': 'NEW',
   'ui.placeHint': 'Tap a tile to move. ✓ places the building.',
