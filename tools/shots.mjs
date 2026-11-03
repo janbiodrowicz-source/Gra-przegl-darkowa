@@ -50,6 +50,140 @@ export const SCENARIOS = {
       await wait(page, 1800);
     },
   },
+  panel: {
+    path: '?test&demo',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, () => {
+        const b = window.__game.state.buildings.find((x) => x.type === 'sawmill');
+        window.__ui.select({ kind: 'building', id: b.id });
+      });
+      await wait(page, 700);
+    },
+  },
+  tile: {
+    path: '?test',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, () => {
+        const s = window.__game.state;
+        const i = s.tiles.indexOf('t');
+        const n = Math.sqrt(s.tiles.length);
+        window.__ui.select({ kind: 'tile', x: i % n, y: Math.floor(i / n) });
+      });
+      await wait(page, 700);
+    },
+  },
+  quests: {
+    path: '?test',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, async () => {
+        const g = window.__game;
+        const { suggestSpot } = await import('/js/core/actions.js');
+        const spot = suggestSpot(g.state, 'field');
+        g.dispatch('build', 'field', spot.x, spot.y);
+        window.__ui.openQuests();
+      });
+      await wait(page, 900);
+    },
+  },
+  settings: {
+    path: '?test',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, () => window.__ui.openSettings());
+      await wait(page, 700);
+    },
+  },
+  welcome: {
+    path: '?test&demo',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, async () => {
+        const m = await import('/js/dev/demo.js');
+        window.__ui.showWelcome(m.DEMO_REPORT);
+      });
+      await wait(page, 900);
+    },
+  },
+  place: {
+    path: '?test&demo',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, () => window.__ui.startPlacement('field'));
+      await wait(page, 700);
+    },
+  },
+  english: {
+    path: '?test&demo',
+    fresh: true,
+    async run(page) {
+      await wait(page, 600);
+      await game(page, () => { window.__game.setSetting('lang', 'en'); });
+      await game(page, async () => { (await import('/js/i18n.js')).setLang('en'); });
+      await wait(page, 600);
+      await game(page, () => {
+        const b = window.__game.state.buildings.find((x) => x.type === 'market');
+        window.__ui.select({ kind: 'building', id: b.id });
+      });
+      await wait(page, 700);
+    },
+  },
+  interact: {
+    path: '?test',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      const count = () => game(page, () => window.__game.state.buildings.length);
+      const before = await count();
+      // card → placement bar → confirm
+      await page.click('.card[data-type="field"]');
+      await wait(page, 250);
+      if (!(await page.isVisible('.placebar'))) throw new Error('placement bar not shown');
+      await page.click('.placebar__ok');
+      await wait(page, 300);
+      if ((await count()) !== before + 1) throw new Error('building not placed via UI');
+      // quest pill claim (q1 done after the field)
+      await page.click('.qpill__claim', { force: true }); // it pulses forever, so it is never "stable"
+      await wait(page, 300);
+      const q = await game(page, () => window.__game.state.quests.q1);
+      if (q !== 'claimed') throw new Error(`quest not claimed: ${q}`);
+      // keyboard: 1 → hut placement, Escape cancels
+      await page.keyboard.press('1');
+      await wait(page, 150);
+      const mode = await game(page, () => window.__ui.state.mode);
+      await page.keyboard.press('Escape');
+      await wait(page, 150);
+      const mode2 = await game(page, () => window.__ui.state.mode);
+      if (mode !== 'place' || mode2 !== 'idle') throw new Error(`keyboard placement failed: ${mode}/${mode2}`);
+      // settings: switch to English and back
+      await page.click('.hud-btn');
+      await wait(page, 300);
+      await page.click('.seg button[lang="en"]');
+      await wait(page, 400);
+      const title = await page.textContent('.modal__title');
+      if (!/Settings/.test(title)) throw new Error(`language switch failed: ${title}`);
+      await page.click('.seg button[lang="pl"]');
+      await wait(page, 400);
+      // hold to reset
+      const box = await page.locator('.hold').boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await wait(page, 1700);
+      await page.mouse.up();
+      await wait(page, 400);
+      const after = await count();
+      if (after !== 1) throw new Error(`reset failed, buildings: ${after}`);
+      return { placed: true, claimed: true, keyboard: true, lang: true, reset: true };
+    },
+  },
   offline: {
     path: '?test',
     fresh: true,

@@ -64,6 +64,11 @@ export default {
   'reason.disabled': 'Niedostępne',
 
   'ui.quests': 'Zadania',
+  'ui.missing': 'Brakuje:',
+  'ui.details': 'Szczegóły',
+  'ui.levelOf': 'Poziom {n}/{max}',
+  'ui.nature': 'Natura',
+  'ui.capShort': 'limit',
   'ui.settings': 'Ustawienia',
   'ui.close': 'Zamknij',
   'ui.claim': 'Odbierz',

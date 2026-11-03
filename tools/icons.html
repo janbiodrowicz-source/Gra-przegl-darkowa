@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><title>Wysepka — ikony</title>
+<link rel="icon" href="data:,">
+<style>
+  body{margin:0;padding:16px;background:#fff7e8;color:#3b2a20;font:13px Inter,system-ui,sans-serif}
+  h2{font-size:14px;margin:14px 0 6px}
+  .row{display:flex;flex-wrap:wrap;gap:10px}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:4px;width:92px;padding:8px;border-radius:12px;background:#f8ead2}
+  .cell .big{width:64px;height:64px}
+  .cell .small{width:22px;height:22px}
+  .cell span{font-size:11px}
+  .dark{background:#0e7c74;color:#fff}
+</style></head>
+<body>
+<h2>Zasoby</h2><div class="row" id="res"></div>
+<h2>UI</h2><div class="row" id="ui"></div>
+<h2>Budynki</h2><div class="row" id="bld"></div>
+<script type="module">
+  import { icon, ICON_NAMES } from '../js/ui/icons.js';
+  const put = (id, names, dark) => {
+    const root = document.getElementById(id);
+    for (const n of names) {
+      const c = document.createElement('div'); c.className = 'cell' + (dark ? ' dark' : '');
+      c.innerHTML = icon(n, 'big') + icon(n, 'small') + `<span>${n}</span>`;
+      root.appendChild(c);
+    }
+  };
+  put('res', ICON_NAMES.res); put('ui', ICON_NAMES.ui); put('bld', ICON_NAMES.buildings);
+</script>
+</body></html>

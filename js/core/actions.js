@@ -5,9 +5,9 @@
 import { BALANCE, BUILDINGS } from '../config.js';
 import {
   adjacencyBonus, baseRateOf, buildCost, buildingAt, canAfford, capsOf, clampToCaps,
-  countType, getBuilding, grant, isUnlocked, pay, refundOf, upgradeCost, addInto,
+  countType, getBuilding, grant, isUnlocked, pay, refundOf, upgradeCost, addInto, occupancy, occKey,
 } from './economy.js';
-import { TILE, clearedTileCode, idx, inBounds, isClearable, setTile } from './map.js';
+import { N, NEIGHBORS8, TILE, clearedTileCode, idx, inBounds, isBuildable, isClearable, setTile } from './map.js';
 import { updateQuests } from './quests.js';
 
 export { claimQuest } from './quests.js';
@@ -117,6 +117,52 @@ export function clearTile(state, x, y) {
   const events = [{ type: 'cleared', x, y, kind: code, gained }];
   updateQuests(state, events);
   return { ok: true, gained, events };
+}
+
+/**
+ * A good default tile for a new building: neighbour bonus first, then close to
+ * the town centre (or `near`) and next to other buildings. Ignores cost.
+ */
+export function suggestSpot(state, type, near = null) {
+  let cx = (N - 1) / 2, cy = (N - 1) / 2;
+  if (near) {
+    cx = near.x;
+    cy = near.y;
+  } else if (state.buildings.length) {
+    cx = 0;
+    cy = 0;
+    for (const b of state.buildings) { cx += b.x; cy += b.y; }
+    cx /= state.buildings.length;
+    cy /= state.buildings.length;
+  }
+  const occ = occupancy(state);
+  let best = null, bestScore = -Infinity;
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      if (!isBuildable(state.tiles[idx(x, y)]) || occ.has(occKey(x, y))) continue;
+      const bonus = adjacencyBonus(state, type, x, y, occ);
+      let neighbours = 0;
+      for (const [dx, dy] of NEIGHBORS8) if (occ.has(occKey(x + dx, y + dy))) neighbours++;
+      const score = bonus * 12 + Math.min(neighbours, 3) * 0.5 - Math.hypot(x - cx, y - cy) * 0.6;
+      if (score > bestScore) { bestScore = score; best = { x, y }; }
+    }
+  }
+  return best;
+}
+
+/** Remembers a one-off UI hint (e.g. "new building" badge). */
+export function setHint(state, key, value = true) {
+  if (value) state.flags.hints[key] = true;
+  else delete state.flags.hints[key];
+  return { ok: true, events: [] };
+}
+
+/** Extra reward (e.g. "×2 for an ad" on the welcome screen); respects caps. */
+export function grantReward(state, amounts) {
+  const clean = {};
+  for (const [k, v] of Object.entries(amounts || {})) if (Number.isFinite(v) && v > 0) clean[k] = v;
+  const gained = grant(state.res, clean, capsOf(state));
+  return { ok: true, gained, events: [{ type: 'reward', gained }] };
 }
 
 /** Dev/debug helper: adds resources (respects caps). */
