@@ -33,7 +33,7 @@ Profiler rysowania: w konsoli `window.__prof = {}`, po chwili odczytaj `window._
 | Wybór | tap w budynek / drzewo / skałę | klik (podświetlenie pod kursorem) |
 | Inne | — | `Q` zadania, `Esc` anuluj/zamknij, `Enter` potwierdź |
 
-Po zmianach: `zip -r dist/wysepka.zip index.html styles.css js` (katalog `dist/` jest w `.gitignore`).
+Po zmianach: `(cd site && zip -r ../dist/wysepka.zip .)` (katalog `dist/` jest w `.gitignore`).
 
 ## Testy i narzędzia (Node 18+, zero zależności)
 
@@ -49,21 +49,24 @@ node tools/shots.mjs --fps  # + pomiar FPS przy 4× spowolnionym CPU
 ## Architektura
 
 ```
-index.html            canvas + kontener UI, splash, favicon jako data: (zero requestów)
-styles.css            tokeny, układ pion/poziom, komponenty, animacje
-js/config.js          WSZYSTKIE dane i liczby balansu (budynki, zadania, mapa, zapis)
-js/core/              czysta logika bez DOM: stan, ekonomia, symulacja, akcje, zadania, mapa,
+wrangler.jsonc        hosting Cloudflare (publikuje tylko folder site/)
+site/                 CAŁA gra (to jest publikowane):
+site/index.html       canvas + kontener UI, splash, favicon jako data: (zero requestów)
+site/_headers         nagłówki cache dla Cloudflare
+site/styles.css       tokeny, układ pion/poziom, komponenty, animacje
+site/js/config.js          WSZYSTKIE dane i liczby balansu (budynki, zadania, mapa, zapis)
+site/js/core/              czysta logika bez DOM: stan, ekonomia, symulacja, akcje, zadania, mapa,
                       world.js — archipelag (lista wysp, wspólne zadania, port, zwiad, kolonizacja)
-js/save/save.js       zapis z wersją (v2 = świat), migracjami (v1 → v2), kopią zapasową i sanityzacją danych
-js/game.js            pętla rAF + stały krok, pauza w tle, offline (8 h), autozapis, konflikt kart
-js/platform.js        puste hooki pod SDK portalu (gameplay, reklamy, zapis, język)
-js/i18n.js, js/lang/  słownik PL (domyślny) i EN, liczba mnoga przez Intl.PluralRules
-js/ui/                interfejs DOM: HUD, karty, panel, okna, toasty, ikony SVG, „juice”;
+site/js/save/save.js       zapis z wersją (v2 = świat), migracjami (v1 → v2), kopią zapasową i sanityzacją danych
+site/js/game.js            pętla rAF + stały krok, pauza w tle, offline (8 h), autozapis, konflikt kart
+site/js/platform.js        puste hooki pod SDK portalu (gameplay, reklamy, zapis, język)
+site/js/i18n.js, js/lang/  słownik PL (domyślny) i EN, liczba mnoga przez Intl.PluralRules
+site/js/ui/                interfejs DOM: HUD, karty, panel, okna, toasty, ikony SVG, „juice”;
                       islands.js — okno archipelagu, znalezione wyspy, wyprawa w panelu portu
-js/render/            renderer canvas: rzut izo, wypiekany teren, sztuka budynków, efekty, życie
-js/input.js           Pointer Events: tap / pan / pinch / kółko / klawiatura
-js/audio/sfx.js       efekty dźwiękowe syntezowane w WebAudio
-js/dev/               panel debug i stan demo (ładowane tylko na żądanie)
+site/js/render/            renderer canvas: rzut izo, wypiekany teren, sztuka budynków, efekty, życie
+site/js/input.js           Pointer Events: tap / pan / pinch / kółko / klawiatura
+site/js/audio/sfx.js       efekty dźwiękowe syntezowane w WebAudio
+site/js/dev/               panel debug i stan demo (ładowane tylko na żądanie)
 tools/                serwer dev, testy, bot balansu, QA w Playwright
 ```
 
@@ -153,7 +156,7 @@ w praktyce: 5. zadanie ~12–14 min, port ~60–65 min, cały archipelag ~1:45�
 
 ## Publikacja
 
-- **itch.io:** spakuj `index.html`, `styles.css` i katalog `js/` (bez `tools/`) do ZIP, typ „HTML”,
+- **itch.io:** spakuj zawartość folderu `site/` do ZIP, typ „HTML”,
   zaznacz obsługę urządzeń mobilnych. Gra nie wykonuje żadnych zapytań sieciowych.
 - **CrazyGames / inne portale:** podłącz SDK w jednym miejscu — `js/platform.js` (komentarze `SDK:`
   wskazują miejsca na `gameplayStart/Stop`, `happytime`, reklamy i zapis w chmurze). Układ poziomy

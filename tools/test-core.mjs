@@ -4,18 +4,18 @@
  * The core is DOM-free, so the exact same modules the browser uses run here.
  */
 import assert from 'node:assert/strict';
-import { BALANCE, BUILDINGS, GAME, MAP, QUESTS, RESOURCES, WORLD } from '../js/config.js';
-import { N, TILE, generateIsland, idx, isBuildable, isClearable, isShoreWater, seaMask, tileAt } from '../js/core/map.js';
-import { createState } from '../js/core/state.js';
-import * as eco from '../js/core/economy.js';
-import { derive, getRates, simulate, tick, timeToAfford, buildingInfo, invalidate as invalidateRates } from '../js/core/sim.js';
-import * as actions from '../js/core/actions.js';
-import { questProgress, currentQuest } from '../js/core/quests.js';
-import { canPrestige, applyPrestige } from '../js/core/prestige.js';
-import { SaveError, loadGame, loadSettings, migrate, parseSave, sanitize, serialize, writeSave } from '../js/save/save.js';
-import { DICTS, setLang, t } from '../js/i18n.js';
-import { createBus } from '../js/core/events.js';
-import { colonize, createWorld, linkWorld, scoutBlocker, setActive, setMain, simulateWorld, startScout, tickWorld } from '../js/core/world.js';
+import { BALANCE, BUILDINGS, GAME, MAP, QUESTS, RESOURCES, WORLD } from '../site/js/config.js';
+import { N, TILE, generateIsland, idx, isBuildable, isClearable, isShoreWater, seaMask, tileAt } from '../site/js/core/map.js';
+import { createState } from '../site/js/core/state.js';
+import * as eco from '../site/js/core/economy.js';
+import { derive, getRates, simulate, tick, timeToAfford, buildingInfo, invalidate as invalidateRates } from '../site/js/core/sim.js';
+import * as actions from '../site/js/core/actions.js';
+import { questProgress, currentQuest } from '../site/js/core/quests.js';
+import { canPrestige, applyPrestige } from '../site/js/core/prestige.js';
+import { SaveError, loadGame, loadSettings, migrate, parseSave, sanitize, serialize, writeSave } from '../site/js/save/save.js';
+import { DICTS, setLang, t } from '../site/js/i18n.js';
+import { createBus } from '../site/js/core/events.js';
+import { colonize, createWorld, linkWorld, scoutBlocker, setActive, setMain, simulateWorld, startScout, tickWorld } from '../site/js/core/world.js';
 
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });

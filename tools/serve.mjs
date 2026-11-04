@@ -8,7 +8,9 @@ import { createReadStream, statSync } from 'node:fs';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
+// The game lives in site/ (that folder is what Cloudflare publishes); tools/ is served too for dev pages.
+export const REPO = resolve(fileURLToPath(new URL('..', import.meta.url)));
+export const ROOT = resolve(REPO, 'site');
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -39,8 +41,9 @@ export function startServer({ port = 8080, host = '127.0.0.1', root = ROOT, quie
       return;
     }
     if (path.endsWith('/')) path += 'index.html';
-    const file = resolve(root, `.${path}`);
-    if (file !== root && !file.startsWith(root + sep)) {
+    const base = root === ROOT && path.startsWith('/tools/') ? REPO : root;
+    const file = resolve(base, `.${path}`);
+    if (file !== base && !file.startsWith(base + sep)) {
       res.writeHead(403).end();
       return;
     }
