@@ -8,8 +8,8 @@
 
 export const GAME = Object.freeze({
   id: 'wysepka',
-  version: '0.2.0',
-  saveVersion: 1,
+  version: '0.3.0',
+  saveVersion: 2,
   saveKey: 'wysepka.save',
   backupKey: 'wysepka.save.bak',
   settingsKey: 'wysepka.settings',
@@ -25,11 +25,42 @@ export const GAME = Object.freeze({
 });
 
 export const MAP = Object.freeze({
-  size: 14,                // grid is size × size; the outer ring is always sea,
-                           // so the island itself spans about 12 × 12 tiles
-  landMin: 100,            // generated island has between landMin..landMax land tiles
+  size: 20,                // grid is size × size for every island; the outer ring is always sea
+  legacySize: 14,          // grid size of v1 saves (migrated by padding)
+  landMin: 100,            // the home island has between landMin..landMax land tiles
   landMax: 112,
   defaultSeed: 20261103,
+});
+
+/**
+ * Island biomes. The home island is the balanced start; every other biome is
+ * found by scouting from a port and leans towards one resource.
+ *  land     – [min, max] land tiles      forests / forestSize – tree clusters
+ *  rocks / rockSize – rock outcrops       trees / palms – scattered trees
+ *  ponds    – inland ponds                mods – production multipliers per resource
+ */
+export const BIOMES = Object.freeze({
+  home: Object.freeze({ land: [100, 112], forests: [3, 4], forestSize: [4, 7], rocks: 2, rockSize: [3, 4], trees: [2, 4], palms: [1, 3], ponds: 1, mods: {} }),
+  forest: Object.freeze({ land: [150, 175], forests: [7, 9], forestSize: [5, 8], rocks: 1, rockSize: [2, 3], trees: [6, 9], palms: [0, 1], ponds: 1, mods: { wood: 1.5, stone: 0.8 } }),
+  snow: Object.freeze({ land: [150, 175], forests: [2, 3], forestSize: [3, 5], rocks: 6, rockSize: [3, 5], trees: [1, 3], palms: [0, 0], ponds: 0, mods: { stone: 1.6, food: 0.75 } }),
+  tropic: Object.freeze({ land: [140, 160], forests: [2, 3], forestSize: [3, 5], rocks: 1, rockSize: [2, 3], trees: [2, 3], palms: [6, 10], ponds: 2, mods: { food: 1.4, coins: 1.15, stone: 0.8 } }),
+  fertile: Object.freeze({ land: [165, 195], forests: [2, 3], forestSize: [3, 5], rocks: 2, rockSize: [2, 3], trees: [2, 4], palms: [1, 2], ponds: 3, mods: { food: 1.6, wood: 0.85 } }),
+});
+export const BIOME_ORDER = Object.freeze(['home', 'forest', 'snow', 'tropic', 'fertile']);
+
+/** Archipelago: ports, scouting and new islands. */
+export const WORLD = Object.freeze({
+  maxIslands: 5,
+  scoutCost: Object.freeze({ wood: 150, food: 120, coins: 200 }),
+  scoutTime: 150,          // [s] at port level 1
+  scoutSpeedPerLevel: 0.15, // each port level makes the trip this much faster
+  scoutTimeGrowth: 1.35,   // every island already owned makes the next trip longer (farther seas)
+  growBeforeNext: 20,      // the newest island needs this many residents before the next trip
+  offers: 3,               // islands found per trip (fewer when few biomes are left)
+  colonizeCost: Object.freeze({ wood: 300, stone: 200, food: 150, coins: 500 }),
+  colonizeGrowth: 1.35,    // each further island costs ×1.35 (the 5th still fits a ~900 storage)
+  settlerCargo: Object.freeze({ wood: 140, stone: 60, food: 110, coins: 30 }), // what the first ship brings along
+  settlerPop: 4,
 });
 
 /** Resources in HUD order. */
@@ -74,6 +105,7 @@ export const BALANCE = Object.freeze({
  *                ({ targets, bonus, bonusPerLevel }) — e.g. a well waters nearby fields
  *  charm       – decoration points (+charmPerLevel); charm raises all coin income
  *  coastal     – must be placed next to water
+ *  onWater     – placed on a sea tile next to the shore instead of on land
  *  unlock      – id of the quest that must be claimed first
  */
 export const BUILDINGS = Object.freeze({
@@ -161,10 +193,19 @@ export const BUILDINGS = Object.freeze({
     charm: 6, charmPerLevel: 2,
     unlock: 'q10',
   }),
+  /* ---- archipelago ---- */
+  port: Object.freeze({
+    cost: { wood: 350, stone: 250, coins: 600 },
+    upgrade: { wood: 150, stone: 150, coins: 300 },
+    onWater: true,           // stands on the sea right next to the shore (a pier) — never short of room
+    maxCount: 1,             // one port per island
+    port: true,              // sends scouting ships (faster with every level)
+    unlock: 'q14',
+  }),
 });
 
 /** Build bar order. */
-export const BUILDING_ORDER = Object.freeze(['hut', 'field', 'sawmill', 'quarry', 'market', 'warehouse', 'fisher', 'well', 'mill', 'bakery', 'flowers', 'fountain']);
+export const BUILDING_ORDER = Object.freeze(['hut', 'field', 'sawmill', 'quarry', 'market', 'warehouse', 'fisher', 'well', 'mill', 'bakery', 'flowers', 'fountain', 'port']);
 
 /**
  * Quest chain. Each quest becomes active after the previous one is claimed.
@@ -175,6 +216,10 @@ export const BUILDING_ORDER = Object.freeze(['hut', 'field', 'sawmill', 'quarry'
  *   cleared  { count }                       – clear that many trees/rocks
  *   resource { res, amount }                 – hold that much of a resource
  *   charm    { amount }                      – reach that much charm (decorations)
+ *   islands  { count }                       – own that many islands
+ *
+ * Quests are shared by the whole archipelago: goals count on whichever island
+ * meets them (buildings and residents are not summed across islands).
  */
 export const QUESTS = Object.freeze([
   Object.freeze({ id: 'q1', goal: { type: 'have', buildings: { field: 1 } }, reward: { wood: 20 } }),
@@ -192,6 +237,11 @@ export const QUESTS = Object.freeze([
   Object.freeze({ id: 'q12', goal: { type: 'resource', res: 'food', amount: 800 }, reward: { coins: 500 } }),
   Object.freeze({ id: 'q13', goal: { type: 'charm', amount: 30 }, reward: { coins: 700 } }),
   Object.freeze({ id: 'q14', goal: { type: 'pop', count: 150 }, reward: { coins: 1000 } }),
+  // archipelago
+  Object.freeze({ id: 'q15', goal: { type: 'have', buildings: { port: 1 } }, reward: { wood: 200, food: 150 } }),
+  Object.freeze({ id: 'q16', goal: { type: 'islands', count: 2 }, reward: { coins: 800 } }),
+  Object.freeze({ id: 'q17', goal: { type: 'islands', count: 3 }, reward: { coins: 1200 } }),
+  Object.freeze({ id: 'q18', goal: { type: 'islands', count: 5 }, reward: { coins: 2000 } }),
 ]);
 
 /** Prestige is only a hook for now (see js/core/prestige.js). */

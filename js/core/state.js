@@ -17,18 +17,19 @@ export function defaultFlags() {
 }
 
 export function defaultMeta() {
-  return { prestige: 0, prestigePoints: 0, prestigeCount: 0 };
+  return { prestige: 0, prestigePoints: 0, prestigeCount: 0, islands: 1 };
 }
 
 /**
  * Creates a fresh game.
- * @param {{ seed: number, now?: number }} opts  `now` is a wall-clock timestamp (ms).
+ * @param {{ seed: number, now?: number, biome?: string }} opts  `now` is a wall-clock timestamp (ms).
  */
-export function createState({ seed, now = 0 }) {
-  const { tiles, start } = generateIsland(seed >>> 0);
+export function createState({ seed, now = 0, biome = 'home' }) {
+  const { tiles, start } = generateIsland(seed >>> 0, biome);
   const state = {
     v: GAME.saveVersion,
     seed: seed >>> 0,
+    biome,
     time: 0,
     res: { ...BALANCE.startRes },
     pop: BALANCE.startPop,

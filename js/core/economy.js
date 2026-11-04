@@ -3,7 +3,7 @@
  * Nothing here mutates state except the explicit resource helpers
  * (pay / grant) that work on a plain resource object.
  */
-import { BALANCE, BUILDINGS, CAPPED, RESOURCES, QUESTS } from '../config.js';
+import { BALANCE, BIOMES, BUILDINGS, CAPPED, RESOURCES, QUESTS } from '../config.js';
 import { NEIGHBORS8, TILE_KINDS, tileAt } from './map.js';
 
 /* ---------------- resource helpers ---------------- */
@@ -119,6 +119,25 @@ export function baseRateOf(type, level) {
   const out = {};
   for (const k in d.produce) out[k] = d.produce[k] * level;
   return out;
+}
+
+/** Production multiplier of the island's biome for a resource (1 = neutral). */
+export function biomeMult(state, res) {
+  return BIOMES[state.biome]?.mods[res] ?? 1;
+}
+
+/** Applies biome multipliers to a rate object (returns a new object). */
+export function withBiome(state, rate) {
+  if (!rate) return rate;
+  const out = {};
+  for (const k in rate) out[k] = rate[k] * biomeMult(state, k);
+  return out;
+}
+
+/** Copies of a building type on the island have reached its limit (e.g. one port). */
+export function atLimit(state, type) {
+  const max = BUILDINGS[type]?.maxCount;
+  return !!max && countType(state, type) >= max;
 }
 
 export function producesFood(type) {

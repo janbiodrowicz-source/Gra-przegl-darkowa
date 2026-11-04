@@ -124,6 +124,11 @@ export function welcomeDialog({ report, canDouble, onDouble, onClose }) {
   if (fullTimes.length && lost) {
     notes.append(h('div.note', null, h('span.note__ico', { html: icon('box') }), t('welcome.full', { t: fmtDuration(Math.min(...fullTimes)) })));
   }
+  if (report.others?.length) {
+    const hungry = report.others.filter((o) => o.hungrySeconds >= 60).length;
+    notes.append(h('div.note', null, h('span.note__ico', { html: icon('ship') }),
+      t('welcome.others', { n: report.others.length }) + (hungry ? ` ${t('welcome.othersHungry', { n: hungry })}` : '')));
+  }
   if (report.hungerAt != null && report.hungrySeconds >= 30) {
     notes.append(h('div.note.note--bad', null, h('span.note__ico', { html: icon('food') }), t('welcome.hunger', { t: fmtDuration(report.hungerAt) })));
   }

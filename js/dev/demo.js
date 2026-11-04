@@ -8,6 +8,7 @@ import { build, clearTile, suggestSpot, upgrade } from '../core/actions.js';
 import { capsOf, popCapOf } from '../core/economy.js';
 import { getRates } from '../core/sim.js';
 import { N } from '../core/map.js';
+import { linkWorld, worldFromState } from '../core/world.js';
 
 /** stage 1: ~15 min town (quest 5); stage 2: ~40 min town with the second wave. */
 export function buildDemoState(seed = 20261103, stage = 1) {
@@ -62,6 +63,40 @@ export function buildDemoState(seed = 20261103, stage = 1) {
   s.time = stage === 2 ? 40 * 60 : 15 * 60;
   getRates(s);
   return s;
+}
+
+/** stage 3: the archipelago — home island with a harbour, two settled islands, scouts back with offers. */
+export function buildDemoWorld(seed = 20261103) {
+  const home = buildDemoState(seed, 2);
+  for (const q of QUESTS.slice(0, 15)) home.quests[q.id] = 'claimed';
+  home.quests.q16 = 'claimed';
+  home.quests.q17 = 'active';
+  const world = worldFromState(home);
+  const settle = (biome, s2, plan) => {
+    const isl = createState({ seed: s2, now: Date.now(), biome });
+    isl.res = { wood: 1e5, stone: 1e5, food: 1e5, coins: 1e5 };
+    world.islands.push(isl);
+    linkWorld(world);
+    for (const [type, n] of plan) for (let i = 0; i < n; i++) {
+      const spot = suggestSpot(isl, type);
+      if (spot) build(isl, type, spot.x, spot.y);
+    }
+    const caps = capsOf(isl);
+    isl.res = { wood: Math.round(caps.wood * 0.5), stone: Math.round(caps.stone * 0.8), food: Math.round(caps.food * 0.4), coins: 120 };
+    isl.pop = popCapOf(isl) - 1;
+    return isl;
+  };
+  home.res = { wood: 1e5, stone: 1e5, food: 1e5, coins: 1e5 };
+  const portSpot = suggestSpot(home, 'port');
+  if (portSpot) build(home, 'port', portSpot.x, portSpot.y);
+  const caps = capsOf(home);
+  home.res = { wood: Math.round(caps.wood * 0.6), stone: Math.round(caps.stone * 0.5), food: Math.round(caps.food * 0.7), coins: Math.round(caps.coins * 0.6) };
+  settle('snow', seed + 11, [['field', 2], ['hut', 3], ['quarry', 3], ['sawmill', 1], ['warehouse', 1]]);
+  settle('tropic', seed + 23, [['fisher', 3], ['hut', 4], ['field', 1], ['sawmill', 1], ['market', 1], ['flowers', 2]]);
+  world.islands[2].flags.hungry = true; // shows the red dot
+  world.found = 2;
+  world.scout = { from: 0, offers: [{ biome: 'forest', seed: seed + 31 }, { biome: 'fertile', seed: seed + 47 }] };
+  return linkWorld(world);
 }
 
 export const DEMO_REPORT = Object.freeze({

@@ -17,7 +17,7 @@ node tools/serve.mjs        # http://127.0.0.1:8080/
 |-----------------|-----------|
 | `?debug`        | panel deweloperski (FPS, liczby, kody: zasoby, przewijanie czasu ×10, skok o 1 h / 9 h) |
 | `?test`         | udostępnia `window.__game`, `window.__ui`, `window.__renderer` dla testów |
-| `?demo`         | gotowa osada do zrzutów ekranu (nie nadpisuje zapisu); `?demo=2` — osada po ~40 min z drugą falą budynków |
+| `?demo`         | gotowa osada do zrzutów ekranu (nie nadpisuje zapisu); `?demo=2` — osada po ~40 min z drugą falą budynków; `?demo=3` — archipelag (3 wyspy, port, zwiad z ofertami) |
 | `?ads=mock`     | udaje reklamę nagradzaną (przycisk „×2” na ekranie powrotu) |
 
 Profiler rysowania: w konsoli `window.__prof = {}`, po chwili odczytaj `window.__prof` (ms/klatkę na sekcję).
@@ -36,8 +36,8 @@ Po zmianach: `zip -r dist/wysepka.zip index.html styles.css js` (katalog `dist/`
 ## Testy i narzędzia (Node 18+, zero zależności)
 
 ```bash
-node tools/test-core.mjs    # 33 testy logiki (core działa bez DOM)
-node tools/balance.mjs      # bot grający 60 min na wielu wyspach + cele tempa (--minutes, --seeds, --verbose)
+node tools/test-core.mjs    # 38 testów logiki (core działa bez DOM)
+node tools/balance.mjs      # bot grający 120 min archipelagiem na wielu mapach + cele tempa (--minutes, --seeds, --verbose)
 node tools/shots.mjs        # Playwright: zrzuty 390×844 / 1280×720, błędy konsoli, obce requesty
 node tools/shots.mjs --fps  # + pomiar FPS przy 4× spowolnionym CPU
 ```
@@ -50,12 +50,14 @@ node tools/shots.mjs --fps  # + pomiar FPS przy 4× spowolnionym CPU
 index.html            canvas + kontener UI, splash, favicon jako data: (zero requestów)
 styles.css            tokeny, układ pion/poziom, komponenty, animacje
 js/config.js          WSZYSTKIE dane i liczby balansu (budynki, zadania, mapa, zapis)
-js/core/              czysta logika bez DOM: stan, ekonomia, symulacja, akcje, zadania, mapa
-js/save/save.js       zapis z wersją, migracjami, kopią zapasową i sanityzacją danych
+js/core/              czysta logika bez DOM: stan, ekonomia, symulacja, akcje, zadania, mapa,
+                      world.js — archipelag (lista wysp, wspólne zadania, port, zwiad, kolonizacja)
+js/save/save.js       zapis z wersją (v2 = świat), migracjami (v1 → v2), kopią zapasową i sanityzacją danych
 js/game.js            pętla rAF + stały krok, pauza w tle, offline (8 h), autozapis, konflikt kart
 js/platform.js        puste hooki pod SDK portalu (gameplay, reklamy, zapis, język)
 js/i18n.js, js/lang/  słownik PL (domyślny) i EN, liczba mnoga przez Intl.PluralRules
-js/ui/                interfejs DOM: HUD, karty, panel, okna, toasty, ikony SVG, „juice”
+js/ui/                interfejs DOM: HUD, karty, panel, okna, toasty, ikony SVG, „juice”;
+                      islands.js — okno archipelagu, znalezione wyspy, wyprawa w panelu portu
 js/render/            renderer canvas: rzut izo, wypiekany teren, sztuka budynków, efekty, życie
 js/input.js           Pointer Events: tap / pan / pinch / kółko / klawiatura
 js/audio/sfx.js       efekty dźwiękowe syntezowane w WebAudio
@@ -65,7 +67,11 @@ tools/                serwer dev, testy, bot balansu, QA w Playwright
 
 Zasady:
 - **Jeden kierunek**: UI i renderer tylko czytają stan i słuchają zdarzeń z szyny (`core/events.js`);
-  stan zmieniają wyłącznie akcje z `core/actions.js` (przez `game.dispatch`).
+  stan zmieniają wyłącznie akcje z `core/actions.js` (przez `game.dispatch`, na wyspie na ekranie)
+  i `core/world.js` (przez `game.dispatchWorld`: przełączanie wysp, zwiad, kolonizacja).
+- **Świat**: `game.world` = lista wysp; `game.state` to zawsze wyspa na ekranie (renderer i UI nie musiały
+  się zmieniać). Zadania i `meta` są wspólnym obiektem wszystkich wysp; każda wyspa ma własną mapę,
+  budynki, surowce i ludność i pracuje w tle tym samym `tick()` (także offline).
 - **Core bez DOM i bez zegara** — czas przychodzi parametrem, więc ten sam kod działa w Node
   (testy, bot) i w przeglądarce; offline liczy się tym samym `tick()` co gra.
 - **Wydajność**: warstwa statyczna (morze + teren) w cache, sprite'y budynków w dokładnej skali ekranu,
@@ -91,6 +97,7 @@ Zasady:
 | Piekarnia | żywność + monety | 2 (+1/poz.) | +30% za każdy młyn |
 | Klomb | **urok** +1 (+1/poz.) | — | — |
 | Fontanna | **urok** +6 (+2/poz.) | — | — |
+| Port | zwiad i nowe wyspy; **na wodzie przy brzegu**, 1 na wyspę; poziom = szybszy statek | — | — |
 
 **Urok** (ozdoby): każdy punkt to +4% wszystkich monet (targi, piekarnie, podatki) — ujście dla monet,
 które samo się spłaca. **Aura** to bonus, który budynek daje sąsiadom (podgląd przy stawianiu: `+25% ×N`).
@@ -104,13 +111,32 @@ które samo się spłaca. **Aura** to bonus, który budynek daje sąsiadom (podg
 - Zadania, zestaw 2: Rybak + Studnia (Młyn) → Młyn + 5 pól (Piekarnia) → Piekarnia (Klomb) → urok 8 →
   60 mieszkańców (Fontanna) → poziom 6 → 800 żywności → urok 30 → 150 mieszkańców.
   `core/prestige.js` to pusty hook pod „Nową wyprawę”.
+- Zadania, zestaw 3 (archipelag): Port → 2 wyspy → 3 wyspy → 5 wysp.
 - Karta bez dochodu brakującego surowca pokazuje jego ikonę i „brak”; tapnięcie mówi, skąd go wziąć.
 
-**Balans** (`node tools/balance.mjs`, 60 min, mediana z 8 wysp, „aktywny” bot):
-pierwsza budowa 0:00, 6 pierwszych budynków ~6:00, pierwszy pełny magazyn ~4:20,
-5. zadanie ~9:30, 10. zadanie ~24 min, 14. (ostatnie) ~45 min; akcja co ≤ 65 s na starcie,
-≤ 60 s później, zero ślepych zaułków. Człowiek gra ok. 1.3–1.5× wolniej od bota, czyli w praktyce:
-5. zadanie ~12–14 min, koniec drugiego zestawu ~60–70 min. „Niedzielny” bot (zagląda co 45 s): ~54 min.
+**Archipelag** (etap 1): po 14. zadaniu odblokowuje się Port. Statek płynie na zwiad (150 s, każda
+kolejna wyspa ×1.35 dalej, poziom portu przyspiesza) i wraca z 2–3 wyspami do wyboru; kolonizacja
+kosztuje surowce wyspy, z której wypłynął statek (×1.35 za każdą kolejną), a osadnicy dostają paczkę
+startową. Przed kolejnym rejsem najnowsza wyspa musi mieć 20 mieszkańców. Maks. 5 wysp, każda z innym biomem:
+
+| Biom | Mapa | Specjalność |
+|---|---|---|
+| Wysepka (start) | ~105 pól, zrównoważona | — |
+| Zielony Gaj | ~160 pól, dużo lasu | drewno +50%, kamień −20% |
+| Mroźna Skała | ~160 pól, dużo skał, śnieg | kamień +60%, żywność −25% |
+| Rajska Laguna | ~150 pól, palmy, stawy | żywność +40%, monety +15%, kamień −20% |
+| Złote Pola | ~180 pól, stawy | żywność +60%, drewno −15% |
+
+Przycisk z ikoną wyspy w HUD otwiera okno archipelagu: przełączanie wysp („Płyń”), wybór wyspy
+głównej (★ — od niej zawsze startuje gra), status zwiadu; czerwona kropka = głód na innej wyspie.
+Na razie wyspy nie wymieniają się surowcami — to etap 2 (transport), potem rynek NPC (etap 3).
+
+**Balans** (`node tools/balance.mjs`, 120 min, mediana z 8 wysp, „aktywny” bot gra całym archipelagiem):
+pierwsza budowa 0:00, 6 pierwszych budynków ~6:00, pierwszy pełny magazyn ~4:20, 5. zadanie ~9 min,
+10. zadanie ~24 min, 14. ~45 min, port ~45 min, 2. wyspa ~48 min, 5. wyspa ~81 min; akcja co ≤ 70 s
+na starcie, ≤ 60 s później, zero ślepych zaułków. Człowiek gra ok. 1.3–1.5× wolniej od bota, czyli
+w praktyce: 5. zadanie ~12–14 min, port ~60–65 min, cały archipelag ~1:45–2:00 h.
+„Niedzielny” bot (zagląda co 45 s): port ~56 min, 5. wyspa ~112 min.
 
 ## Jak rozbudowywać
 
@@ -134,11 +160,13 @@ pierwsza budowa 0:00, 6 pierwszych budynków ~6:00, pierwszy pełny magazyn ~4:2
 ## Znane braki
 
 1. Hooki portalu są puste — brak prawdziwej integracji SDK (reklamy testowane tylko przez `?ads=mock`).
-2. Zawartość kończy się po ~60–70 min (14 zadań): potem zostaje „buduj i ulepszaj” do poz. 10, a wyspa (~100 kafli) się zapełnia; prestiż to pusty hook.
-3. Balans dostrojony botem dla pierwszej godziny; po ~45 min (bot) drewno i kamień zaczynają się przelewać — zabraknie ujść, dopóki nie wejdzie prestiż. Wymaga danych od graczy.
+2. Zawartość: 18 zadań, ~2 h z całym archipelagiem; potem zostaje „buduj i ulepszaj”. Prestiż to pusty hook.
+3. Wyspa domowa po ~45 min (bot) przelewa się drewnem i kamieniem, a nowe wyspy startują od zera —
+   brak transportu między wyspami (etap 2) i rynku (etap 3). Monety są jeszcze osobne na każdej wyspie
+   (wspólny skarbiec wejdzie razem z transportem). Balans wymaga danych od graczy.
 4. FPS mierzone w kontenerze bez GPU (rasteryzacja programowa) — potrzebne testy na prawdziwych telefonach (zwłaszcza tanie Androidy i iOS Safari).
 5. Mieszkańcy, mewy i chmury są czysto dekoracyjne; brak dróg i transportu towarów.
-6. Budynki tylko 1×1, bez obracania i cofania akcji.
+6. Budynki tylko 1×1, bez obracania i cofania akcji. Siatka każdej wyspy ma 20×20 pól (zapisy v1 z 14×14 są wyśrodkowywane).
 7. Tylko efekty dźwiękowe (bez muzyki i ambientu morza).
 8. Dostępność podstawowa: etykiety ARIA na przyciskach, ale mapa (canvas) nie jest dostępna dla czytników ekranu; brak trybu dla daltonistów.
 9. Zapis tylko lokalny (localStorage) — brak synchronizacji między urządzeniami; wykrywanie drugiej karty jest proste.
@@ -146,8 +174,8 @@ pierwsza budowa 0:00, 6 pierwszych budynków ~6:00, pierwszy pełny magazyn ~4:2
 
 ## 5 pomysłów na rozwój
 
-1. **Nowa wyprawa (prestiż):** odpływasz statkiem na większą wyspę innego biomu (śnieżna, pustynna, wulkaniczna) i zabierasz stały bonus produkcji — długoterminowa pętla.
-2. **Port i handel:** przystań na brzegu i łodzie z ofertami wymiany surowców (rybak już korzysta z linii brzegowej).
+1. **Transport i rynek (w planie):** trasy statków między wyspami (automatyczne z progiem nadwyżki i jednorazowe na ratunek), wspólny skarbiec, rynek NPC ze zmiennymi cenami; później ewentualnie rynek graczy.
+2. **Prestiż:** stały bonus po odkryciu całego archipelagu (np. „Nowy archipelag”) i wyspa wulkaniczna z rzadkim surowcem.
 3. **Pory roku i wydarzenia:** wiosna/lato/jesień/zima zmieniają wygląd i produkcję; dożynki, sztormy, wizyta kupca — krótkie cele na każdą sesję.
 4. **Mieszkańcy z imionami:** drobne prośby („chcę klomb przy domu”), a urok wpływa też na przyrost ludności (dziś tylko na monety).
 5. **Funkcje portalowe:** codzienna skrzynka, osiągnięcia, zapis w chmurze i reklamy nagradzane jako opcjonalne przyspieszenia (np. ×2 produkcji na 10 min) przez `platform.js`.

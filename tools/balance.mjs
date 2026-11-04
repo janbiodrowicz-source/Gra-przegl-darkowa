@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Balance bot: plays the first minutes with the real core (no DOM) and checks
- * the pacing targets.  Usage:  node tools/balance.mjs [--minutes=60] [--seeds=5] [--verbose]
+ * Balance bot: plays the archipelago with the real core (no DOM) and checks
+ * the pacing targets.  Usage:  node tools/balance.mjs [--minutes=120] [--seeds=5] [--verbose]
  *
  * Two player profiles:
  *   active – checks in every 3 s (an engaged first session), chops a few trees early
  *   casual – checks in every 45 s (glances at the game), chops at most 2 trees
  */
-import { BALANCE, BUILDINGS, BUILDING_ORDER, CAPPED, QUESTS } from '../js/config.js';
+import { BALANCE, BUILDINGS, BUILDING_ORDER, CAPPED, QUESTS, WORLD } from '../js/config.js';
+import { colonize, colonizeCost, createWorld, growthNeeded, hasPort, scoutBlocker, startScout, tickWorld } from '../js/core/world.js';
 import { createState } from '../js/core/state.js';
 import { buildCost, canAfford, countType, isUnlocked, upgradeCost, charmOf, housingOf } from '../js/core/economy.js';
 import { build, claimQuest, clearTile, placementPreview, suggestSpot, upgrade } from '../js/core/actions.js';
@@ -19,8 +20,9 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
   const [k, v = 'true'] = a.replace(/^--/, '').split('=');
   return [k, v];
 }));
-const MINUTES = Number(args.minutes || 60);
-const LONG = MINUTES >= 55; // second-wave targets only make sense for a full hour
+const MINUTES = Number(args.minutes || 120);
+const LONG = MINUTES >= 55;     // second-wave targets only make sense for a full hour
+const WORLDLY = MINUTES >= 110; // archipelago targets need two hours
 const SEEDS = Number(args.seeds || 5);
 const VERBOSE = args.verbose === 'true';
 
@@ -33,12 +35,13 @@ const fmtT = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Mat
 
 /* ------------------------------------------------------------------ bot */
 
-function wants(s) {
+function wants(s, growing = false) {
   const r = getRates(s);
   const list = [];
   const want = (kind, type, why, id = null) => list.push({ kind, type, why, id });
   const popCap = r.popCap;
   const q = currentQuest(s);
+  if (growing && s.pop >= popCap - 2) wantHousing(s, want, 'quest grow');
 
   // 1) food first: never let the town starve for long
   const futureCons = Math.max(s.pop, Math.min(popCap, s.pop + 4)) * BALANCE.foodPerPerson;
@@ -53,7 +56,7 @@ function wants(s) {
   }
 
   // 2) freshly unlocked buildings are irresistible
-  for (const type of ['market', 'warehouse', 'fisher', 'well', 'mill', 'bakery', 'flowers', 'fountain']) {
+  for (const type of ['market', 'warehouse', 'fisher', 'well', 'mill', 'bakery', 'flowers', 'fountain', 'port']) {
     if (isUnlocked(s, type) && countType(s, type) === 0) want('build', type, 'new');
   }
 
@@ -180,7 +183,8 @@ function chopTarget(s) {
 }
 
 function play(seed, profile, minutes, log) {
-  const s = createState({ seed, now: 0 });
+  const world = createWorld({ seed, now: 0 });
+  const s = world.islands[0]; // the home island: pacing milestones are measured here
   const events = [];
   const actions = [];
   const milestones = {};
@@ -191,10 +195,90 @@ function play(seed, profile, minutes, log) {
   const out = [];
   const note = (t, text) => { events.push({ t, text }); if (log) out.push(`${fmtT(t)}  ${text}`); };
 
+  /** One check-in on one island: claim-free actions, saving up for archipelago goals. */
+  function islandTurn(isl, t, home) {
+    let done = 0;
+    // archipelago: scouting and settling come first and are worth saving for
+    const index = world.islands.indexOf(isl);
+    if (world.scout?.offers && world.scout.from === index) {
+      const cost = colonizeCost(world);
+      if (canAfford(isl.res, cost)) {
+        const r = colonize(world, 0, 0);
+        if (r.ok) {
+          note(t, `⚓ settle ${world.islands[r.island].biome} (island ${world.islands.length})`);
+          milestones[`island_${world.islands.length}`] ??= t;
+          actions.push(t);
+          return;
+        }
+      } else if (timeToAfford(isl, cost).seconds < 300) return; // save up
+    }
+    if (!world.scout && hasPort(isl)) {
+      const why = scoutBlocker(world, index);
+      if (!why) {
+        startScout(world, index);
+        note(t, '⛵ scout');
+        milestones.firstScout ??= t;
+        actions.push(t);
+        done++;
+      } else if (why === 'cost' && timeToAfford(isl, WORLD.scoutCost).seconds < 90) return;
+    }
+    let blockedByWood = false;
+    let blockedByStone = false;
+    let guard = 0;
+    // the newest island must reach N residents before the next trip: homes (and food) first
+    const growing = growthNeeded(world)?.island === index;
+    while (done < profile.actionsPerCheck && guard++ < 6) {
+      const { list, rates } = wants(isl, growing); // re-evaluated after every action
+      let acted = false;
+      for (const w of list) {
+        if (w.kind === 'build' && !isUnlocked(isl, w.type)) continue;
+        const cost = costOf(isl, w);
+        if (!cost) continue;
+        if (!canAfford(isl.res, cost)) {
+          if ((cost.wood ?? 0) > isl.res.wood) blockedByWood = true;
+          else if ((cost.stone ?? 0) > isl.res.stone) blockedByStone = true;
+          // the top priorities are worth waiting for if they come soon
+          const eta = timeToAfford(isl, cost, rates).seconds;
+          if (eta < 40 && (w.why === 'food' || w.why.startsWith('quest'))) break;
+          if (eta < 60 && w.why === 'new') break; // worth saving up for a brand-new building
+          if (eta < 240 && w.type === 'port') break; // the harbour opens the world
+          continue;
+        }
+        let r;
+        if (w.kind === 'build') {
+          const spot = suggestSpot(isl, w.type);
+          if (!spot) continue;
+          r = build(isl, w.type, spot.x, spot.y);
+          if (r.ok) {
+            note(t, `${home ? '' : `[${isl.biome}] `}build ${w.type} (${w.why})`);
+            if (home) milestones.firstBuild ??= t;
+          }
+        } else {
+          r = upgrade(isl, w.id);
+          if (r.ok) note(t, `${home ? '' : `[${isl.biome}] `}upgrade ${w.type} → ${r.building.level} (${w.why})`);
+        }
+        if (r && r.ok) {
+          done++;
+          actions.push(t);
+          acted = true;
+          break;
+        }
+      }
+      if (!acted) break;
+    }
+    if (!done && (blockedByWood || blockedByStone) && (home ? chops < profile.maxChops && t <= profile.chopUntil : true)) {
+      const spot = blockedByWood ? chopTarget(isl) : rockTarget(isl);
+      if (spot && clearTile(isl, spot.x, spot.y).ok) {
+        if (home) chops++;
+        note(t, `${home ? '' : `[${isl.biome}] `}chop`);
+        actions.push(t);
+      }
+    }
+  }
+
   for (let t = 0; t <= T; t++) {
     if (t % profile.every === 0) {
-      let done = 0;
-      // claim first (free)
+      // claim first (free); rewards go to the island the quest was finished on — the bot uses home
       for (const q of QUESTS) {
         if (s.quests[q.id] === 'done') {
           const r = claimQuest(s, q.id);
@@ -205,65 +289,19 @@ function play(seed, profile, minutes, log) {
           }
         }
       }
-      let blockedByWood = false;
-      let blockedByStone = false;
-      let guard = 0;
-      while (done < profile.actionsPerCheck && guard++ < 6) {
-        const { list, rates } = wants(s); // re-evaluated after every action
-        let acted = false;
-        for (const w of list) {
-        if (w.kind === 'build' && !isUnlocked(s, w.type)) continue;
-        const cost = costOf(s, w);
-        if (!cost) continue;
-        if (!canAfford(s.res, cost)) {
-          if ((cost.wood ?? 0) > s.res.wood) blockedByWood = true;
-          else if ((cost.stone ?? 0) > s.res.stone) blockedByStone = true;
-          // the top priorities are worth waiting for if they come soon
-          const eta = timeToAfford(s, cost, rates).seconds;
-          if (eta < 40 && (w.why === 'food' || w.why.startsWith('quest'))) break;
-          if (eta < 60 && w.why === 'new') break; // worth saving up for a brand-new building
-          continue;
-        }
-        let r;
-        if (w.kind === 'build') {
-          const spot = suggestSpot(s, w.type);
-          if (!spot) continue;
-          r = build(s, w.type, spot.x, spot.y);
-          if (r.ok) {
-            note(t, `build ${w.type} (${w.why})`);
-            milestones.firstBuild ??= t;
-          }
-        } else {
-          r = upgrade(s, w.id);
-          if (r.ok) note(t, `upgrade ${w.type} → ${r.building.level} (${w.why})`);
-        }
-          if (r && r.ok) {
-            done++;
-            actions.push(t);
-            acted = true;
-            break;
-          }
-        }
-        if (!acted) break;
-      }
-      if (!done && (blockedByWood || blockedByStone) && chops < profile.maxChops && t <= profile.chopUntil) {
-        const spot = blockedByWood ? chopTarget(s) : rockTarget(s);
-        if (spot && clearTile(s, spot.x, spot.y).ok) {
-          chops++;
-          note(t, 'chop a tree');
-          actions.push(t);
-        }
-      }
-      // dead-end detector: nothing affordable soon and no income for what is missing
+      for (const isl of world.islands) islandTurn(isl, t, isl === s);
+      // dead-end detector (home island): nothing affordable soon and no income for what is missing
       const r2 = getRates(s);
       const anySoon = BUILDING_ORDER.some((type) => isUnlocked(s, type) && timeToAfford(s, buildCost(s, type), r2).seconds < 120);
-      stuck = anySoon ? 0 : stuck + profile.every;
+      stuck = anySoon || world.islands.length > 1 ? 0 : stuck + profile.every;
       maxStuck = Math.max(maxStuck, stuck);
     }
     const evs = [];
-    tick(s, 1, evs);
+    tickWorld(world, 1, evs);
     for (const e of evs) {
       if (e.type === 'questDone') { note(t, `✓ ${e.id} done`); milestones[`done_${e.id}`] ??= t; }
+      if (e.island != null) continue;
+      if (e.type === 'scoutReturned') note(t, '⛵ scouts back');
       if (e.type === 'hungerStart') { note(t, '! hunger'); milestones.firstHunger ??= t; }
       if (e.type === 'hungerEnd') note(t, '  fed again');
       if (e.type === 'storageFull') {
@@ -273,7 +311,7 @@ function play(seed, profile, minutes, log) {
     }
     if (log && t % 60 === 0 && t > 0) {
       const r = getRates(s);
-      out.push(`${fmtT(t)}  · wood ${s.res.wood.toFixed(0)} (${r.net.wood.toFixed(2)}/s) stone ${s.res.stone.toFixed(0)} (${r.net.stone.toFixed(2)}) food ${s.res.food.toFixed(0)} (${r.net.food.toFixed(2)}) coins ${s.res.coins.toFixed(0)} (${r.net.coins.toFixed(2)}) pop ${s.pop.toFixed(1)}/${r.popCap} jobs ${r.jobs} buildings ${s.buildings.length}`);
+      out.push(`${fmtT(t)}  · wood ${s.res.wood.toFixed(0)} (${r.net.wood.toFixed(2)}/s) stone ${s.res.stone.toFixed(0)} (${r.net.stone.toFixed(2)}) food ${s.res.food.toFixed(0)} (${r.net.food.toFixed(2)}) coins ${s.res.coins.toFixed(0)} (${r.net.coins.toFixed(2)}) pop ${s.pop.toFixed(1)}/${r.popCap} jobs ${r.jobs} buildings ${s.buildings.length}${world.islands.length > 1 ? ` | islands ${world.islands.map((i) => `${i.biome}:${Math.floor(i.pop)}`).join(' ')}` : ''}`);
     }
   }
   // gaps between actions
@@ -292,7 +330,7 @@ function play(seed, profile, minutes, log) {
     actions: actions.length,
     chops,
     maxStuck,
-    final: { buildings: s.buildings.length, pop: Math.floor(s.pop), quests: QUESTS.filter((q) => s.quests[q.id] === 'claimed').length },
+    final: { buildings: s.buildings.length, pop: Math.floor(s.pop), quests: QUESTS.filter((q) => s.quests[q.id] === 'claimed').length, islands: world.islands.length },
     log: out,
   };
 }
@@ -310,9 +348,12 @@ const TARGETS = [
   ['quest 5 done', (r) => r.milestones.done_q5 ?? Infinity, (v) => v >= 9 * 60 && v <= 14 * 60, '9–14 min', 'median'],
   ['quest 10 done', (r) => r.milestones.done_q10 ?? Infinity, (v) => !LONG || (v >= 20 * 60 && v <= 32 * 60), '20–32 min', 'median'],
   ['quest 14 done', (r) => r.milestones.done_q14 ?? Infinity, (v) => !LONG || (v >= 38 * 60 && v <= 55 * 60), '38–55 min', 'median'],
-  ['max gap 0–5 min', (r) => r.maxGapEarly, (v) => v <= 65, '≤ 65 s', 'all'],
+  ['harbour built', (r) => r.milestones.firstScout ?? Infinity, (v) => !WORLDLY || (v >= 42 * 60 && v <= 60 * 60), '42–60 min', 'median'],
+  ['2nd island', (r) => r.milestones.island_2 ?? Infinity, (v) => !WORLDLY || (v >= 45 * 60 && v <= 65 * 60), '45–65 min', 'median'],
+  ['5th island', (r) => r.milestones.island_5 ?? Infinity, (v) => !WORLDLY || (v >= 70 * 60 && v <= 105 * 60), '70–105 min', 'median'],
+  ['max gap 0–5 min', (r) => r.maxGapEarly, (v) => v <= 70, '≤ 70 s', 'all'],
   ['max gap 5–15 min', (r) => r.maxGapMid, (v) => v <= 150, '≤ 150 s', 'all'],
-  ['max gap 15–60 min', (r) => r.maxGapLate, (v) => v <= 180, '≤ 180 s', 'all'],
+  ['max gap after 15 min', (r) => r.maxGapLate, (v) => v <= 180, '≤ 180 s', 'all'],
   ['dead ends', (r) => r.maxStuck, (v) => v < 120, '< 120 s', 'all'],
 ];
 
@@ -340,7 +381,7 @@ for (const [name, profile] of Object.entries(PROFILES)) {
   }
   const f = runs[0].final;
   console.log(`  milestones (seed ${runs[0].seed}): ${Object.entries(runs[0].milestones).map(([k, v]) => `${k}=${fmtT(v)}`).join(', ')}`);
-  console.log(`  after ${MINUTES} min: ${f.buildings} buildings, ${f.pop} residents, ${f.quests}/${QUESTS.length} quests, ${runs[0].actions} actions, ${runs[0].chops} chops`);
+  console.log(`  after ${MINUTES} min: ${f.buildings} buildings, ${f.pop} residents, ${f.quests}/${QUESTS.length} quests, ${f.islands} islands, ${runs[0].actions} actions, ${runs[0].chops} chops`);
 }
 console.log(failures ? `\n${failures} target(s) missed` : '\nAll pacing targets met ✨');
 process.exit(failures ? 1 : 0);

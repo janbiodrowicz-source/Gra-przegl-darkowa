@@ -4,10 +4,10 @@
  */
 import { BALANCE, BUILDINGS } from '../config.js';
 import {
-  adjacencyBonus, auraOf, auraTargetsAt, baseRateOf, charmOf, isCoastal, buildCost, buildingAt, canAfford, capsOf, clampToCaps,
+  adjacencyBonus, atLimit, auraOf, auraTargetsAt, baseRateOf, charmOf, isCoastal, withBiome, buildCost, buildingAt, canAfford, capsOf, clampToCaps,
   countType, getBuilding, grant, isUnlocked, pay, refundOf, upgradeCost, addInto, occupancy, occKey,
 } from './economy.js';
-import { N, NEIGHBORS8, TILE, clearedTileCode, idx, inBounds, isBuildable, isClearable, setTile } from './map.js';
+import { N, NEIGHBORS8, TILE, clearedTileCode, idx, inBounds, isBuildable, isClearable, isShoreWater, setTile } from './map.js';
 import { updateQuests } from './quests.js';
 
 export { claimQuest } from './quests.js';
@@ -22,11 +22,16 @@ export function canPlace(state, type, x, y) {
   if (!BUILDINGS[type]) return fail('notFound');
   const cost = buildCost(state, type);
   if (!isUnlocked(state, type)) return fail('locked', { cost });
+  if (atLimit(state, type)) return fail('limit', { cost });
   if (!inBounds(x, y)) return fail('outOfBounds', { cost });
   const code = state.tiles[idx(x, y)];
   const bonus = adjacencyBonus(state, type, x, y);
-  if (code === TILE.WATER) return fail('water', { cost, bonus });
-  if (isClearable(code)) return fail('blocked', { cost, bonus });
+  if (BUILDINGS[type].onWater) {
+    if (!isShoreWater(state.tiles, x, y)) return fail('notShore', { cost, bonus });
+  } else {
+    if (code === TILE.WATER) return fail('water', { cost, bonus });
+    if (isClearable(code)) return fail('blocked', { cost, bonus });
+  }
   if (buildingAt(state, x, y)) return fail('occupied', { cost, bonus });
   if (BUILDINGS[type].coastal && !isCoastal(state, x, y)) return fail('notCoast', { cost, bonus });
   if (!canAfford(state.res, cost)) return fail('cost', { cost, bonus, tileOk: true });
@@ -36,7 +41,7 @@ export function canPlace(state, type, x, y) {
 /** Production a new building would have at (x, y) with full staff. */
 export function placementPreview(state, type, x, y) {
   const bonus = adjacencyBonus(state, type, x, y);
-  const base = baseRateOf(type, 1);
+  const base = withBiome(state, baseRateOf(type, 1));
   let rate = null;
   if (base) {
     rate = {};
@@ -142,7 +147,8 @@ export function suggestSpot(state, type, near = null) {
   let best = null, bestScore = -Infinity;
   for (let y = 0; y < N; y++) {
     for (let x = 0; x < N; x++) {
-      if (!isBuildable(state.tiles[idx(x, y)]) || occ.has(occKey(x, y))) continue;
+      if (occ.has(occKey(x, y))) continue;
+      if (def.onWater ? !isShoreWater(state.tiles, x, y) : !isBuildable(state.tiles[idx(x, y)])) continue;
       if (def.coastal && !isCoastal(state, x, y)) continue;
       const bonus = adjacencyBonus(state, type, x, y, occ);
       // aura buildings want many targets around them; decorations like homes around them

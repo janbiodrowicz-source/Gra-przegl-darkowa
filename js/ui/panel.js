@@ -2,7 +2,8 @@
  * Slide-in details panel (bottom sheet on phones, right sidebar on wide screens)
  * for a selected building or a tree/rock tile.
  */
-import { BALANCE, BUILDINGS } from '../config.js';
+import { BALANCE, BUILDINGS, WORLD } from '../config.js';
+import { createPortBlock } from './islands.js';
 import { t } from '../i18n.js';
 import { canAfford, getBuilding } from '../core/economy.js';
 import { demolishPreview } from '../core/actions.js';
@@ -27,7 +28,7 @@ function stat(label, valueNode, extraClass = '') {
   return h(`div.stat${extraClass}`, null, h('span.stat__label', null, label), h('span.stat__value', null, valueNode));
 }
 
-export function createPanel({ onUpgrade, onDemolish, onClear, onClose, artFor }) {
+export function createPanel({ onUpgrade, onDemolish, onClear, onClose, artFor, getWorld, onScout, onOffers }) {
   const el = h('aside.panel', { 'aria-hidden': 'true', role: 'region', 'aria-label': t('ui.details') });
   let target = null;
   let refs = null;
@@ -111,6 +112,13 @@ export function createPanel({ onUpgrade, onDemolish, onClear, onClose, artFor })
       stats.append(h('div.stat.stat--wide', null, h('span.stat__rule', null, t('ui.charmRule', { pct: Math.round(BALANCE.charmCoinBonus * 100) }))));
     }
 
+    if (def.port) {
+      const v = h('span.stat__num');
+      r.statRefs.speed = v;
+      stats.append(stat(t('port.speed'), [h('span', { html: icon('ship') }), v]));
+      r.port = createPortBlock({ getWorld, onScout, onOffers });
+    }
+
     r.next = h('div.next');
     r.upCost = h('span.btn__costrow');
     r.upBtn = h('button.btn.btn--primary.btn--block.panel__upgrade', { type: 'button', onclick: () => onUpgrade(b.id) },
@@ -121,7 +129,7 @@ export function createPanel({ onUpgrade, onDemolish, onClear, onClose, artFor })
       h('span.btn__icon', { html: icon('trash') }), r.demoLabel);
 
     el.replaceChildren(head,
-      h('div.panel__body', null, h('p.panel__desc', null, t(`b.${b.type}.desc`)), pips, stats, r.next),
+      h('div.panel__body', null, h('p.panel__desc', null, t(`b.${b.type}.desc`)), pips, stats, r.port?.el ?? null, r.next),
       h('div.panel__foot', null, h('div.panel__actions', null, r.upBtn, r.demoBtn)));
     return r;
   }
@@ -196,6 +204,8 @@ export function createPanel({ onUpgrade, onDemolish, onClear, onClose, artFor })
       refs.armed = armed;
     }
     const info = buildingInfo(state, b, rates);
+    refs.port?.update(state);
+    if (refs.statRefs.speed) setText(refs.statRefs.speed, fmtPct(WORLD.scoutSpeedPerLevel * (b.level - 1)));
     setText(refs.subEl, t('ui.levelOf', { n: b.level, max: BALANCE.maxLevel }));
     [...refs.pips.children].forEach((pip, i) => setClass(pip, 'is-on', i < b.level));
     const s = refs.statRefs;
@@ -228,6 +238,7 @@ export function createPanel({ onUpgrade, onDemolish, onClear, onClose, artFor })
         if (n.storage) nodes.push(chip('box', `+${fmt(n.storage)}`));
         if (n.aura) nodes.push(chip('drop', fmtPct(n.aura)));
         if (n.charm) nodes.push(chip('sparkle', `+${n.charm}`));
+        if (BUILDINGS[b.type].port) nodes.push(chip('ship', fmtPct(WORLD.scoutSpeedPerLevel * (n.level - 1))));
         return nodes;
       });
       const afford = canAfford(state.res, info.upgradeCost);

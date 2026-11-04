@@ -5,7 +5,7 @@
  */
 import { BALANCE, BUILDINGS, CAPPED, GAME, RESOURCES } from '../config.js';
 import {
-  adjacencyBonus, auraOf, baseRateOf, capsOf, charmMultiplier, charmOf, emptyRes, housingOf, occupancy, popCapOf,
+  adjacencyBonus, auraOf, baseRateOf, withBiome, capsOf, charmMultiplier, charmOf, emptyRes, housingOf, occupancy, popCapOf,
   producesFood, refundOf, slotsOf, storageOf, totalCharm, upgradeCost,
 } from './economy.js';
 import { prestigeMultiplier } from './prestige.js';
@@ -74,7 +74,7 @@ function computeDerived(state, workers) {
     const w = alloc.get(b.id) || 0;
     const staff = slots > 0 ? w / slots : 1;
     const bonus = adjacencyBonus(state, b.type, b.x, b.y, occ);
-    const base = baseRateOf(b.type, b.level);
+    const base = withBiome(state, baseRateOf(b.type, b.level));
     const rate = {};
     for (const k in base) {
       rate[k] = base[k] * staff * (1 + bonus) * pm * (k === 'coins' ? coinMult : 1);
@@ -243,7 +243,7 @@ export function buildingInfo(state, b, rates = getRates(state)) {
   const bonus = p ? p.bonus : adjacencyBonus(state, b.type, b.x, b.y);
   const rate = {};
   if (p) for (const k in p.rate) rate[k] = k === 'food' ? p.rate[k] : p.rate[k] * rates.mult;
-  const fullRate = scaleRate(baseRateOf(b.type, b.level), 1 + bonus, rates.coinMult);
+  const fullRate = scaleRate(withBiome(state, baseRateOf(b.type, b.level)), 1 + bonus, rates.coinMult);
   const cost = upgradeCost(b);
   return {
     id: b.id,
@@ -269,7 +269,7 @@ export function buildingInfo(state, b, rates = getRates(state)) {
       storage: storageOf(b.type, b.level + 1),
       aura: auraOf(b.type, b.level + 1),
       charm: charmOf(b.type, b.level + 1),
-      fullRate: scaleRate(baseRateOf(b.type, b.level + 1), 1 + bonus, rates.coinMult),
+      fullRate: scaleRate(withBiome(state, baseRateOf(b.type, b.level + 1)), 1 + bonus, rates.coinMult),
     } : null,
   };
 }

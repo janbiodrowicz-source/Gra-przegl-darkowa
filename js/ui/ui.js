@@ -19,6 +19,8 @@ import { createBuildBar } from './buildbar.js';
 import { createPanel } from './panel.js';
 import { createToasts } from './toasts.js';
 import { conflictDialog, createModalLayer, questsDialog, settingsDialog, welcomeDialog } from './modals.js';
+import { islandName, islandsDialog, offersDialog } from './islands.js';
+import { fmtClock } from './format.js';
 
 const defaultArt = (type) => h('span.art-svg', { html: icon(type) });
 
@@ -47,6 +49,7 @@ export function createUI({ game, bus, sfx, audio, platform }) {
       onQuests: () => openQuests(),
       onClaim: (el) => claimCurrent(el),
       onSettings: () => openSettings(),
+      onIslands: () => openIslands(),
     });
     const bar = createBuildBar({
       onCard: (type) => onCard(type),
@@ -69,6 +72,12 @@ export function createUI({ game, bus, sfx, audio, platform }) {
       },
       onClose: () => deselect(),
       artFor: (type, level) => artFor(type, level, 'panel'),
+      getWorld: () => game.world,
+      onScout: () => {
+        const r = game.dispatchWorld('startScout', game.world.active);
+        if (r.ok) sfx.click();
+      },
+      onOffers: () => openOffers(),
     });
     const toasts = createToasts();
     const modals = createModalLayer({ sfx });
@@ -94,7 +103,7 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     const s = game.state;
     const r = rates();
     ui.hintCard = hintCard(s);
-    parts.hud.update(s, r);
+    parts.hud.update(s, r, game.world);
     parts.bar.update(s, r, ui);
     parts.panel.update(s, r);
     parts.modals.update(s, r);
@@ -292,6 +301,45 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     else openQuests();
   }
 
+  /* ---------------- archipelago ---------------- */
+
+  function openIslands() {
+    sfx.click();
+    hideTip();
+    parts.modals.open(islandsDialog({
+      game,
+      onSail: (i) => {
+        parts.modals.close();
+        game.dispatchWorld('setActive', i);
+      },
+      onMain: (i) => game.dispatchWorld('setMain', i),
+      onOffers: () => {
+        parts.modals.close();
+        setTimeout(openOffers, 260);
+      },
+    }));
+  }
+
+  function openOffers() {
+    if (!game.world.scout?.offers) return;
+    sfx.click();
+    hideTip();
+    parts.modals.open(offersDialog({
+      game,
+      onSettle: (i) => {
+        const r = game.dispatchWorld('colonize', i);
+        if (!r.ok) return;
+        parts.modals.close();
+        game.dispatchWorld('setActive', r.island);
+      },
+      onAgain: () => {
+        game.dispatchWorld('dismissOffers');
+        parts.modals.close();
+      },
+      onLater: () => parts.modals.close(),
+    }));
+  }
+
   let reopenSettings = false;
   function openSettings() {
     sfx.click();
@@ -473,11 +521,33 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     // the card may sit off-screen at the end of the bar: bring it into view
     setTimeout(() => parts?.bar.reveal(e.building), 500);
   });
-  bus.on('hungerStart', () => {
+  bus.on('hungerStart', (e) => {
     sfx.warn();
+    if (e.island != null) {
+      toast(t('toast.islandHunger', { name: islandName(game.world, e.island) }), { kind: 'bad', icon: 'food', ms: 4200 });
+      return;
+    }
     toast(t('toast.hungerStart'), { kind: 'bad', icon: 'food', ms: 4200 });
   });
-  bus.on('hungerEnd', () => toast(t('toast.hungerEnd'), { kind: 'good', icon: 'food' }));
+  bus.on('scoutStarted', (e) => toast(t('toast.scoutStarted', { t: fmtClock(e.seconds) }), { kind: 'good', icon: 'ship', ms: 3600 }));
+  bus.on('scoutReturned', () => {
+    sfx.questReady();
+    toast(t('toast.scoutReturned'), { kind: 'good', icon: 'ship', ms: 5200 });
+    // the moment is worth a window, unless the player is busy with something else
+    if (!parts.modals.isOpen && ui.mode !== 'place') setTimeout(openOffers, 600);
+  });
+  bus.on('colonized', (e) => {
+    confetti(root, innerWidth / 2, innerHeight / 3);
+    toast(t('toast.colonized', { name: t(`biome.${e.biome}.name`) }), { kind: 'good', icon: `isl_${e.biome}`, ms: 4800 });
+  });
+  bus.on('islandSwitched', (e) => {
+    cancelPlacement(true);
+    deselect(true);
+    toast(t('toast.switched', { name: islandName(game.world, e.island) }), { kind: 'info', icon: `isl_${game.world.islands[e.island].biome}` });
+    update();
+  });
+  bus.on('mainChanged', (e) => toast(t('toast.mainChanged', { name: islandName(game.world, e.island) }), { kind: 'good', icon: 'star' }));
+  bus.on('hungerEnd', (e) => { if (e.island == null) toast(t('toast.hungerEnd'), { kind: 'good', icon: 'food' }); });
   bus.on('storageFull', (e) => {
     const now = performance.now();
     if (now - (fullToastAt[e.res] || -1e9) < 90000) return;
@@ -531,6 +601,8 @@ export function createUI({ game, bus, sfx, audio, platform }) {
     deselect,
     openQuests,
     openSettings,
+    openIslands,
+    openOffers,
     showWelcome,
     /** First-run greeting. */
     welcome() {

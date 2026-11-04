@@ -81,6 +81,91 @@ export const SCENARIOS = {
       return game(page, () => document.querySelector('.placebar__meta')?.textContent);
     },
   },
+  legacy: {
+    // a v1 save (14×14 island, five quests done) loads into the archipelago version
+    path: '?test',
+    fresh: true,
+    async run(page) {
+      await wait(page, 600);
+      await game(page, async () => {
+        const { createState } = await import('/js/core/state.js');
+        const { N } = await import('/js/core/map.js');
+        const s = createState({ seed: 4242 });
+        const off = Math.floor((N - 14) / 2);
+        let tiles = '';
+        for (let y = 0; y < 14; y++) for (let x = 0; x < 14; x++) tiles += s.tiles[(y + off) * N + x + off];
+        const quests = { q1: 'claimed', q2: 'claimed', q3: 'claimed', q4: 'claimed', q5: 'claimed', q6: 'active' };
+        const state = { seed: s.seed, time: 600, res: { wood: 120, stone: 80, food: 90, coins: 300 }, pop: 3, tiles,
+          buildings: s.buildings.map((b) => ({ ...b, x: b.x - off, y: b.y - off })), nextId: s.nextId, quests,
+          stats: s.stats, flags: s.flags, meta: { prestige: 0, prestigePoints: 0, prestigeCount: 0 }, createdAt: 1 };
+        window.__game.readOnly = true; // keep this tab from overwriting the injected save
+        localStorage.setItem('wysepka.save', JSON.stringify({ v: 1, savedAt: Date.now() - 5000, tab: 'old', state }));
+      });
+      await page.reload({ waitUntil: 'load' });
+      await wait(page, 1500);
+      return game(page, () => ({ status: window.__game.loadStatus, islands: window.__game.world.islands.length, q6: window.__game.state.quests.q6, hut: window.__game.state.buildings[0] && [window.__game.state.buildings[0].x, window.__game.state.buildings[0].y] }));
+    },
+  },
+  isles: {
+    // archipelago: island button with a red dot, the islands window
+    path: '?test&demo=3',
+    fresh: true,
+    async run(page) {
+      await wait(page, 1200);
+      await game(page, () => window.__ui.openIslands());
+      await wait(page, 700);
+      return game(page, () => ({ islands: window.__game.world.islands.length, rows: document.querySelectorAll('.isle').length }));
+    },
+  },
+  offers: {
+    path: '?test&demo=3',
+    fresh: true,
+    async run(page) {
+      await wait(page, 1000);
+      await game(page, () => window.__ui.openOffers());
+      await wait(page, 700);
+      return game(page, () => document.querySelectorAll('.offer').length);
+    },
+  },
+  harbour: {
+    // harbour panel: send the ship; the ship sprite disappears while away
+    path: '?test&demo=3',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, () => {
+        const g = window.__game;
+        g.dispatchWorld('dismissOffers');
+        const b = g.state.buildings.find((x) => x.type === 'port');
+        window.__ui.select({ kind: 'building', id: b.id });
+      });
+      await wait(page, 500);
+      await page.click('.port__send');
+      await wait(page, 700);
+      return game(page, () => ({ scout: window.__game.world.scout }));
+    },
+  },
+  sail: {
+    // switch to the snow island
+    path: '?test&demo=3',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, () => window.__game.dispatchWorld('setActive', 1));
+      await wait(page, 1400);
+      return game(page, () => ({ biome: window.__game.state.biome }));
+    },
+  },
+  sail2: {
+    path: '?test&demo=3',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, () => window.__game.dispatchWorld('setActive', 2));
+      await wait(page, 1400);
+      return game(page, () => ({ biome: window.__game.state.biome }));
+    },
+  },
   panel: {
     path: '?test&demo',
     fresh: true,

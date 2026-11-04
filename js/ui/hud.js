@@ -9,7 +9,7 @@ import { h, setClass, setText, setVar } from './dom.js';
 import { icon } from './icons.js';
 import { fmt, fmtRate } from './format.js';
 
-export function createHud({ onChip, onQuests, onClaim, onSettings }) {
+export function createHud({ onChip, onQuests, onClaim, onSettings, onIslands }) {
   const chips = {};
 
   const chip = (key) => {
@@ -40,13 +40,32 @@ export function createHud({ onChip, onQuests, onClaim, onSettings }) {
   const qClaim = h('button.btn.btn--gold.btn--sm.qpill__claim', { type: 'button', onclick: (e) => onClaim(e.currentTarget) }, t('ui.claim'));
   const qpill = h('div.qpill', null, qMain, qClaim);
 
+  // archipelago: shows the island on screen; a dot when another island needs you
+  const islIco = h('span.hud-isl__ico');
+  const islDot = h('span.hud-isl__dot');
+  const islBtn = h('button.hud-isl', { type: 'button', 'aria-label': t('isl.open'), title: t('isl.open'), onclick: () => onIslands?.() }, islIco, islDot);
+  let islKey = '';
+
   const gear = h('button.hud-btn', { type: 'button', 'aria-label': t('ui.settings'), onclick: onSettings, html: icon('gear') });
 
   const el = h('header.hud', null,
     h('div.hud__res', null, RESOURCES.map(chip)),
-    h('div.hud__aux', null, h('div.hud__spacer'), chip('pop'), qpill, h('div.hud__spacer.hud__spacer--end'), gear));
+    h('div.hud__aux', null, h('div.hud__spacer'), chip('pop'), qpill, islBtn, h('div.hud__spacer.hud__spacer--end'), gear));
 
-  function update(state, rates) {
+  function update(state, rates, world = null) {
+    if (world) {
+      const shown = world.islands.length > 1 || world.quests.q14 === 'claimed';
+      setClass(islBtn, 'is-shown', shown);
+      const key = `${state.biome}`;
+      if (islKey !== key) {
+        islKey = key;
+        islIco.innerHTML = icon(`isl_${state.biome || 'home'}`);
+      }
+      const alert = world.scout?.offers ? 'good' : world.islands.some((s, i) => i !== world.active && s.flags.hungry) ? 'bad' : '';
+      setClass(islDot, 'is-good', alert === 'good');
+      setClass(islDot, 'is-bad', alert === 'bad');
+      setText(islDot, world.islands.length > 1 ? String(world.islands.length) : '');
+    }
     for (const k of RESOURCES) {
       const c = chips[k];
       const value = state.res[k];

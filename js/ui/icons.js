@@ -94,6 +94,12 @@ const UI = {
     <circle cx="12" cy="9.3" r="3.6" fill="currentColor"/>
     <path d="M7.2 8.4a4.8 4.8 0 0 1 9.6 0z" fill="currentColor" opacity=".55"/>
     <path d="M5 20.5a7 7 0 0 1 14 0z" fill="currentColor"/>`,
+  ship: `<path d="M3.5 15.5h17l-2.6 4.3a2 2 0 0 1-1.7 1H7.8a2 2 0 0 1-1.7-1z" fill="#b06c37"/><path d="M3.5 15.5h17" stroke="#8a5a36" stroke-width="1.2"/><path d="M12 3v12.5" stroke="#6e4529" stroke-width="1.5" stroke-linecap="round"/><path d="M12.8 4.2c3.6 2 5.6 5.4 5.9 9.3h-5.9z" fill="#fff4dc"/><path d="M11.2 6.5c-2.5 1.6-4 4-4.4 7h4.4z" fill="#f1e2c4"/><path d="M12.8 3.2l3.2 1-3.2 1z" fill="#e8483b"/>`,
+  isl_home: `<ellipse cx="12" cy="17.5" rx="9.5" ry="3.5" fill="#f3d9a0"/><ellipse cx="12" cy="16.3" rx="7" ry="2.4" fill="#88c96a"/><path d="M8.5 15.5v-3.7l3.5-2.6 3.5 2.6v3.7z" fill="#fff1d6"/><path d="M7.4 12.2 12 8.4l4.6 3.8-1 .8L12 10l-3.6 3z" fill="#e3794d"/>`,
+  isl_forest: `<ellipse cx="12" cy="18" rx="9.5" ry="3.3" fill="#d9c08a"/><ellipse cx="12" cy="17" rx="7.5" ry="2.4" fill="#5daa4f"/><path d="M8 16.5 10.5 8l2.5 8.5z" fill="#2f7a4a"/><path d="M12.5 16.8 15 6.5l2.6 10.3z" fill="#3a8c55"/><circle cx="7" cy="14" r="2.6" fill="#6dbb58"/>`,
+  isl_snow: `<ellipse cx="12" cy="18" rx="9.5" ry="3.3" fill="#c9d6de"/><path d="M4.5 17.5 10 7l3 5 2-3 4.5 8.5z" fill="#97a2ac"/><path d="M8.3 10.3 10 7l1.8 3-1.2.8-.7-.9-.8 1z" fill="#fff"/><path d="M14.4 10.6 15 9l1 1.9-.6.3z" fill="#fff"/>`,
+  isl_tropic: `<ellipse cx="12" cy="18" rx="9.5" ry="3.3" fill="#4fb3d9"/><ellipse cx="12" cy="17.5" rx="6.5" ry="2.3" fill="#f6dfa6"/><path d="M12 17c.4-3.5.2-6.5-1-9" stroke="#8a5a36" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M11 8c-2.6-1.2-5-.6-6.3 1.2 2.4-.4 4.4 0 6.3-1.2zM11 8c2.2-2 5-2 6.5-.4-2.4 0-4.4-.2-6.5.4zM11 8c1.6.5 3.6 2 4.3 4.4-1.8-1.5-3-2.5-4.3-4.4zM11 8c-1.6.3-3.4 1.6-4 3.8 1.6-1.4 2.7-2.3 4-3.8z" fill="#4f9c47"/>`,
+  isl_fertile: `<ellipse cx="12" cy="18" rx="9.5" ry="3.3" fill="#d9b978"/><ellipse cx="12" cy="17" rx="7.5" ry="2.4" fill="#9c6037"/><g stroke="#c08b2b" stroke-width="1.2" stroke-linecap="round"><path d="M8 16.5V10M12 16.8V8.5M16 16.5V10"/></g><g fill="#f3c24f"><ellipse cx="8" cy="9.6" rx="1.4" ry="2.4"/><ellipse cx="12" cy="8" rx="1.4" ry="2.4"/><ellipse cx="16" cy="9.6" rx="1.4" ry="2.4"/></g>`,
   drop: `<path d="M12 3.5c3.2 4.3 6 7.6 6 10.8a6 6 0 0 1-12 0c0-3.2 2.8-6.5 6-10.8z" fill="currentColor"/><path d="M9.3 14.6a2.8 2.8 0 0 0 2.2 2.6" stroke="#fff" stroke-opacity=".7" stroke-width="1.5" stroke-linecap="round" fill="none"/>`,
   home: `<path d="M4.5 11 12 4.5l7.5 6.5M6.8 9.4v9.8h10.4V9.4" ${S} stroke-width="2.2"/><path d="M10.2 19.2v-5h3.6v5" ${S} stroke-width="2"/>`,
   box: `<path d="M4.5 8 12 4.5 19.5 8v8.5L12 20l-7.5-3.5z" ${S} stroke-width="2"/><path d="M4.5 8 12 11.5 19.5 8M12 11.5V20" ${S} stroke-width="2"/>`,
@@ -228,6 +234,20 @@ const BLD = {
     <ellipse cx="20" cy="15" rx="5" ry="1.3" fill="#4fb3d9"/>
     <path d="M20 14c0-4 1-7 0-9-1 2 0 5 0 9z" fill="#8fd6f0"/>
     <path d="M14 15c-3 2-4 6-4 9M26 15c3 2 4 6 4 9" stroke="#8fd6f0" stroke-width="1.4" fill="none" stroke-linecap="round"/>`,
+  port: `
+    <ellipse cx="20" cy="35" rx="16" ry="2.6" fill="#3b2a20" opacity=".14"/>
+    <path d="M2 29h36v6H2z" fill="#4fb3d9"/>
+    <path d="M2 31.5c3 1.2 6 1.2 9 0s6-1.2 9 0 6 1.2 9 0 6-1.2 9 0" stroke="#8fd6f0" stroke-width="1.1" fill="none"/>
+    <rect x="3" y="24" width="18" height="3" rx="1" fill="#c27a3d"/>
+    <path d="M5 27v4M11 27v4M17 27v4" stroke="#8a5a36" stroke-width="1.8"/>
+    <path d="M21 29.5h15l-2 3.5H23z" fill="#b06c37"/>
+    <path d="M28.5 13v16" stroke="#6e4529" stroke-width="1.4"/>
+    <path d="M29.3 14c3.6 2.5 5.6 6.6 5.8 13.5h-5.8z" fill="#fff4dc"/>
+    <path d="M27.7 16.5c-2.6 2-4 5.3-4.3 11h4.3z" fill="#f1e2c4"/>
+    <path d="M29 12.8l3 1-3 1z" fill="#e8483b"/>
+    <rect x="5" y="14" width="10" height="10" fill="#fff4de"/>
+    <path d="M3.5 15 10 9l6.5 6z" fill="#2aa99b"/>
+    <rect x="8.3" y="18.5" width="3.4" height="5.5" fill="#7d4f2f"/>`,
 };
 
 function svg(body, viewBox, cls) {

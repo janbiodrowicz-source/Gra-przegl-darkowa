@@ -379,6 +379,45 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
 .hud-btn:active { transform: scale(0.94); }
 .hud-btn .ico { width: 24px; height: 24px; }
 
+/* archipelago button */
+.hud-isl {
+  position: relative;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  display: none;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--c-paper);
+  box-shadow: var(--sh-card);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.1s;
+}
+.hud-isl.is-shown { display: grid; }
+.hud-isl:active { transform: scale(0.94); }
+.hud-isl__ico .ico { width: 34px; height: 34px; }
+.hud-isl__dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--c-ink-2);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 18px;
+  text-align: center;
+  display: none;
+}
+.hud-isl__dot:not(:empty), .hud-isl__dot.is-good, .hud-isl__dot.is-bad { display: block; }
+.hud-isl__dot.is-good { background: var(--c-accent); animation: pulse 1.2s ease-in-out infinite; }
+.hud-isl__dot.is-bad { background: var(--c-bad); animation: pulse 1.2s ease-in-out infinite; }
+
 /* ------------------------------------------------------------- tooltip */
 
 .tip {
@@ -792,6 +831,64 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
 .quest.is-locked .quest__bottom .btn,
 .quest.is-locked .quest__progress { display: none; }
 
+
+/* ---------------------------------------------------------- archipelago */
+
+.isles__head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.isles__head .modal__hint { margin: 0; text-align: left; }
+.isles__count { font-size: 14px; font-weight: 900; }
+.isles { display: flex; flex-direction: column; gap: 8px; }
+.isle { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 8px; border-radius: 18px; background: var(--c-paper-2); }
+.isle.is-active { background: var(--c-accent-soft); box-shadow: inset 0 0 0 2px var(--c-accent); }
+.isle__ico { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; background: var(--c-paper); }
+.isle__ico .ico { width: 40px; height: 40px; }
+.isle__text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.isle__line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.isle__name { font-size: 15px; font-weight: 900; }
+.isle__tag { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 4px; border-radius: 999px; background: var(--c-gold); color: #4a3410; font-size: 11px; font-weight: 900; }
+.isle__tag .ico { width: 13px; height: 13px; }
+.isle__meta { font-size: 12.5px; font-weight: 700; color: var(--c-ink-2); }
+.isle__mods { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12.5px; font-weight: 900; }
+.isle__mods:empty { display: none; }
+.isle__warn { font-size: 12.5px; font-weight: 900; color: var(--c-warn); }
+.isle__warn:empty { display: none; }
+.isle__warn.is-bad { color: var(--c-bad); }
+.isle__actions { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.isle__here { font-size: 12px; font-weight: 900; color: var(--c-accent); }
+.isle__star { width: 34px; height: 34px; color: var(--c-ink-2); opacity: 0.45; }
+.isle__star .ico { width: 20px; height: 20px; }
+.isle__star.is-on { color: var(--c-gold-dark); opacity: 1; }
+.isle__star:disabled { cursor: default; }
+.isle .btn--sm { gap: 4px; }
+.isle .btn--sm .ico { width: 18px; height: 18px; }
+.isles__status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 16px; background: var(--c-paper-2); font-size: 13px; font-weight: 800; }
+.isles__status > span:first-child .ico { width: 22px; height: 22px; }
+.isles__msg { flex: 1 1 140px; min-width: 0; }
+.mod.is-up { color: var(--c-good); }
+.mod.is-down { color: var(--c-bad); }
+
+.offers { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 10px; }
+.offer { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 18px; background: var(--c-paper-2); }
+.offer__top { display: flex; gap: 10px; align-items: center; }
+.offer__ico { flex: 0 0 auto; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 16px; background: var(--c-paper); }
+.offer__ico .ico { width: 46px; height: 46px; }
+.offer__text { min-width: 0; }
+.offer__name { font-size: 16px; font-weight: 900; }
+.offer__desc { margin-top: 2px; font-size: 13px; line-height: 1.3; color: var(--c-ink-2); }
+.offer__mods { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 13px; font-weight: 900; }
+.offer__land { margin-left: auto; font-size: 12px; font-weight: 800; color: var(--c-ink-2); }
+.offers__cost { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 8px 12px; border-radius: 14px; background: var(--c-paper-2); font-size: 13.5px; font-weight: 900; }
+.offers__label { font-size: 12px; font-weight: 800; color: var(--c-ink-2); text-transform: uppercase; letter-spacing: 0.03em; }
+.modal--offers .modal__hint { text-align: center; }
+.offers__warn { color: var(--c-bad); font-weight: 800; }
+
+.port { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding: 12px; border-radius: 18px; background: var(--c-accent-soft); }
+.port__title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 900; color: var(--c-accent-dark); }
+.port__title .ico { width: 22px; height: 22px; }
+.port__msg { font-size: 13px; font-weight: 700; color: var(--c-ink-2); }
+.port__bar { position: relative; height: 8px; border-radius: 8px; background: rgba(14, 124, 116, 0.18); overflow: hidden; }
+.port__bar i { position: absolute; inset: 0; border-radius: 8px; background: var(--c-accent); transform-origin: left center; transform: scaleX(var(--p, 0)); transition: transform 0.4s linear; }
+
 /* ---------------------------------------------------------------- juice */
 
 .fly {
@@ -861,6 +958,7 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
     height: 52px;
   }
   .hud-btn { position: absolute; top: calc(var(--sat) + 10px); right: calc(var(--sar) + 10px); width: 52px; height: 52px; }
+  .hud-isl { order: 4; width: 52px; height: 52px; }
 
   .buildbar { left: 50%; right: auto; translate: -50% 0; max-width: calc(100vw - var(--sal) - var(--sar) - 24px); }
   /* 12 cards no longer fit on smaller laptops: scroll (wheel works too), fade only when it overflows */

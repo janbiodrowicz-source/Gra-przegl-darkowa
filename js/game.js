@@ -6,10 +6,19 @@
  */
 import { GAME } from './config.js';
 import * as actions from './core/actions.js';
-import { createState } from './core/state.js';
-import { invalidate, simulate, tick } from './core/sim.js';
+import * as worldActions from './core/world.js';
+import { activeIsland, createWorld, simulateWorld, tickWorld, worldFromState } from './core/world.js';
+import { invalidate } from './core/sim.js';
 import { clearSave, loadGame, loadSettings, saveSettings, writeSave } from './save/save.js';
 import { LANGUAGES } from './i18n.js';
+
+const WORLD_ACTIONS = {
+  setActive: worldActions.setActive,
+  setMain: worldActions.setMain,
+  startScout: worldActions.startScout,
+  colonize: (world, offer) => worldActions.colonize(world, offer, Date.now()),
+  dismissOffers: worldActions.dismissOffers,
+};
 
 export const randomSeed = () => ((Math.random() * 0x7fffffff) >>> 0) || 1;
 
@@ -17,7 +26,7 @@ export class Game {
   constructor({ platform, bus }) {
     this.platform = platform;
     this.bus = bus;
-    this.state = null;
+    this.world = null;          // the archipelago; `state` is the island on screen
     this.settings = null;
     this.tab = Math.random().toString(36).slice(2, 10);
 
@@ -47,13 +56,24 @@ export class Game {
     this._onStorage = this._onStorage.bind(this);
   }
 
+  /** The island on screen. Assigning a single island (demo, debug) makes it a one-island world. */
+  get state() {
+    return this.world ? activeIsland(this.world) : null;
+  }
+
+  set state(s) {
+    this.world = s ? worldFromState(s) : null;
+  }
+
   /* ---------------- boot ---------------- */
 
   load() {
     const now = Date.now();
     this.settings = loadSettings(this.platform.storage, { languages: LANGUAGES, locale: this.platform.getLocale() });
     const result = loadGame(this.platform.storage, { now, newSeed: randomSeed() });
-    this.state = result.state;
+    this.world = result.world;
+    // the game always opens on the main island
+    this.world.active = this.world.main;
     this.loadStatus = result.status;
     this.readOnly = !!result.readOnly;
     if (result.savedAt != null) this.applyOffline((now - result.savedAt) / 1000, 'load');
@@ -106,7 +126,7 @@ export class Game {
         this.acc += dt * this.timeScale;
         let steps = 0;
         while (this.acc >= GAME.step && steps < GAME.maxStepsPerFrame * this.timeScale) {
-          tick(this.state, GAME.step, this.pending);
+          tickWorld(this.world, GAME.step, this.pending);
           this.acc -= GAME.step;
           steps++;
         }
@@ -176,7 +196,7 @@ export class Game {
 
   applyOffline(seconds, source) {
     if (!(seconds > 0.5) || this.paused) return null;
-    const report = simulate(this.state, seconds);
+    const report = simulateWorld(this.world, seconds);
     this.pending.push(...report.events);
     this.dirty = true;
     if (report.seconds >= GAME.offlineReportMin) {
@@ -186,12 +206,23 @@ export class Game {
     return report;
   }
 
-  /** Runs a player command from core/actions and emits its events. */
+  /** Runs a player command from core/actions (on the island on screen) and emits its events. */
   dispatch(name, ...args) {
     const fn = actions[name];
     if (typeof fn !== 'function') throw new Error(`Unknown action "${name}"`);
     if (this.paused) return { ok: false, reason: 'disabled' };
-    const result = fn(this.state, ...args);
+    return this._finish(name, fn(this.state, ...args));
+  }
+
+  /** Runs an archipelago command from core/world (setActive, startScout, colonize…). */
+  dispatchWorld(name, ...args) {
+    const fn = WORLD_ACTIONS[name];
+    if (!fn) throw new Error(`Unknown world action "${name}"`);
+    if (this.paused) return { ok: false, reason: 'disabled' };
+    return this._finish(name, fn(this.world, ...args));
+  }
+
+  _finish(name, result) {
     if (result.ok) {
       this.dirty = true;
       if (result.events) this.pending.push(...result.events);
@@ -215,7 +246,7 @@ export class Game {
     this.sinceSave = 0;
     this.dirty = false;
     if (this.readOnly || this.conflict || !this.state) return false;
-    const ok = writeSave(this.platform.storage, this.state, Date.now(), this.tab);
+    const ok = writeSave(this.platform.storage, this.world, Date.now(), this.tab);
     if (!ok && !this.warnedSave) {
       this.warnedSave = true;
       this.bus.emit('saveFailed');
@@ -232,7 +263,7 @@ export class Game {
   /** Wipes progress and rolls a new island (settings stay). */
   reset() {
     clearSave(this.platform.storage);
-    this.state = createState({ seed: randomSeed(), now: Date.now() });
+    this.world = createWorld({ seed: randomSeed(), now: Date.now() });
     this.lastReport = null;
     this.readOnly = false;
     this.save();

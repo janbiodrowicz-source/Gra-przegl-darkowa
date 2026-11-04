@@ -884,7 +884,95 @@ export function fountainWater(g, tier, t) {
   g.stroke();
 }
 
-const BUILDING_DRAW = { hut, field, sawmill, quarry, market, warehouse, fisher, well, mill, bakery, flowers, fountain };
+
+/* ------------------------------------------------------------ harbour */
+
+function port(g, tier) {
+  // The harbour stands on a sea tile: the origin is at sea level, the deck at land height.
+  const D = 14;
+  g.beginPath();
+  g.ellipse(PX(0, 0), PY(0, 0, 0) + 2, 30, 13, 0, 0, TAU);
+  g.fillStyle = 'rgba(20, 70, 90, 0.18)';
+  g.fill();
+  // stilts
+  for (const x of [-0.36, 0, 0.36]) for (const y of [-0.36, 0, 0.36]) box(g, x, y, 0.025, 0.025, -2, D - 2, PAL.darkWood);
+  // deck
+  box(g, 0, 0, 0.42, 0.42, D - 3, 3, PAL.wood);
+  for (let i = 0; i < 9; i++) line(g, [-0.4 + i * 0.1, -0.42, D + 0.1], [-0.4 + i * 0.1, 0.42, D + 0.1], 'rgba(120, 70, 35, 0.35)', 0.8);
+  // harbour master's house at the back of the deck
+  const hx = 0.2, hy = 0.18;
+  box(g, -0.16, -0.16, hx, hy, D, 16, tier === 3 ? PAL.plaster : PAL.cream);
+  onY(g, -0.16 + hy + 0.001, -0.24, -0.12, D, D + 10, PAL.door);
+  windowX(g, -0.16 + hx, -0.16, 0.12, D + 6, 6, tier >= 2);
+  roofX(g, -0.16, -0.16, hx, hy, D + 16, 11, 0.05, PAL.roofTeal);
+  // bollards, crates, barrels on the front edge
+  for (const [x, y] of [[0.38, 0.0], [0.38, 0.3], [0.0, 0.38]]) box(g, x, y, 0.025, 0.025, D, 4, PAL.darkWood);
+  crate(g, 0.22, -0.28, D, 0.06);
+  if (tier >= 2) crate(g, 0.3, -0.16, D, 0.05);
+  if (tier >= 2) crate(g, 0.22, -0.28, D + 6.3, 0.05);
+  // lantern pole at tier 3
+  if (tier === 3) {
+    box(g, -0.38, 0.3, 0.025, 0.025, D, 22, PAL.darkWood);
+    dot(g, PX(-0.38, 0.3), PY(-0.38, 0.3, D + 24), 5, 'rgba(255, 220, 120, 0.35)');
+    dot(g, PX(-0.38, 0.3), PY(-0.38, 0.3, D + 24), 2.2, '#ffe08a');
+  }
+}
+
+/** The moored ship (drawn every frame); hidden while it is out scouting. */
+export function portShip(g, tier, t, away = false) {
+  if (away) return;
+  const bob = Math.sin(t * 1.5) * 1.1;
+  const cx = PX(0.72, 0.2), cy = PY(0.72, 0.2, 0) + bob;
+  const L = tier === 1 ? 16 : 19;
+  // hull
+  g.beginPath();
+  g.moveTo(cx - L, cy - 5);
+  g.lineTo(cx + L, cy - 7);
+  g.quadraticCurveTo(cx + L - 3, cy + 4, cx + 2, cy + 5);
+  g.quadraticCurveTo(cx - L + 5, cy + 4, cx - L, cy - 5);
+  g.closePath();
+  g.fillStyle = tier === 3 ? '#7f4a33' : '#a0633a';
+  g.fill();
+  g.fillStyle = '#e9c38f';
+  g.beginPath();
+  g.moveTo(cx - L, cy - 5);
+  g.lineTo(cx + L, cy - 7);
+  g.lineTo(cx + L - 1, cy - 5);
+  g.lineTo(cx - L + 1, cy - 3);
+  g.closePath();
+  g.fill();
+  // mast + sails (swell gently)
+  const mx = cx - 1, top = cy - 34;
+  g.strokeStyle = '#6e4529';
+  g.lineWidth = 1.6;
+  g.beginPath();
+  g.moveTo(mx, cy - 5);
+  g.lineTo(mx, top);
+  g.stroke();
+  const puff = Math.sin(t * 2) * 0.8;
+  g.beginPath();
+  g.moveTo(mx + 1, top + 3);
+  g.quadraticCurveTo(mx + 13 + puff, top + 13, mx + 1, top + 25);
+  g.closePath();
+  g.fillStyle = '#fff4dc';
+  g.fill();
+  g.beginPath();
+  g.moveTo(mx - 1, top + 9);
+  g.quadraticCurveTo(mx - 9 - puff, top + 17, mx - 1, top + 25);
+  g.closePath();
+  g.fillStyle = '#f1e2c4';
+  g.fill();
+  // pennant
+  g.beginPath();
+  g.moveTo(mx, top);
+  g.lineTo(mx + 7, top + 1.5 + Math.sin(t * 5) * 0.8);
+  g.lineTo(mx, top + 3);
+  g.closePath();
+  g.fillStyle = '#e8483b';
+  g.fill();
+}
+
+const BUILDING_DRAW = { hut, field, sawmill, quarry, market, warehouse, fisher, well, mill, bakery, flowers, fountain, port };
 
 /** Draws the static part of a building sprite. */
 export function drawBuilding(g, type, tier) {
@@ -892,8 +980,9 @@ export function drawBuilding(g, type, tier) {
 }
 
 /** Draws the animated part of a building (or nothing). */
-export function drawBuildingDynamic(g, type, tier, t, phase) {
+export function drawBuildingDynamic(g, type, tier, t, phase, extra = null) {
   switch (type) {
+    case 'port': portShip(g, tier, t + phase, !!extra?.away); break;
     case 'field': fieldStalks(g, tier, t, phase); break;
     case 'sawmill': sawBlade(g, tier, t + phase); break;
     case 'quarry': quarryCrane(g, tier, t + phase); break;
@@ -921,17 +1010,43 @@ export function buildingHeight(type, tier) {
     case 'bakery': return 40;
     case 'flowers': return 14;
     case 'fountain': return tier >= 2 ? 44 : 34;
+    case 'port': return 46;
     default: return 40;
   }
 }
 
 /* ========================================================= nature */
 
-export function drawTree(g, variant, onSand) {
+export function drawTree(g, variant, onSand, biome = 'home') {
   const v = variant;
-  if (onSand) return palm(g, v);
-  if (v < 0.36) return pine(g, v);
+  if (biome === 'snow') {
+    pine(g, v);
+    snowCap(g, v);
+    return;
+  }
+  if (onSand || (biome === 'tropic' && v > 0.55)) return palm(g, v);
+  if (v < (biome === 'forest' ? 0.55 : 0.36)) return pine(g, v);
   return roundTree(g, v);
+}
+
+/** White caps on a pine (snow biome) — same proportions as pine(). */
+function snowCap(g, v) {
+  const s = 0.74 + v * 0.34;
+  g.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  // [apex y, half width at the base of the cap, cap height] for the three tiers
+  for (const [apex, w, h] of [[-33, 3.6, 6], [-28, 4.6, 6], [-22, 5.6, 6.5]]) {
+    g.beginPath();
+    g.moveTo(0, apex * s);
+    g.lineTo(w * s, (apex + h) * s);
+    g.quadraticCurveTo(0, (apex + h - 2) * s, -w * s, (apex + h) * s);
+    g.closePath();
+    g.fill();
+  }
+  // snow at the foot
+  g.beginPath();
+  g.ellipse(1, 2, 9 * s, 3.6 * s, 0, 0, TAU);
+  g.fillStyle = 'rgba(255, 255, 255, 0.6)';
+  g.fill();
 }
 
 function roundTree(g, v) {

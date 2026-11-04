@@ -3,18 +3,37 @@
  * platform.storage), sequential migrations, a known-good backup, and strict
  * sanitising of everything that comes back from storage.
  *
- * Storage format:  { v, savedAt, tab, state: { ...persistent fields } }
+ * Storage format (v2):  { v, savedAt, tab, world: { main, active, scout, seed, found,
+ *                         quests, meta, islands: [ { ...persistent island fields } ] } }
+ * v1 stored a single island as `state` on a 14×14 grid.
  */
-import { BALANCE, BUILDINGS, GAME, MAP, QUESTS, RESOURCES } from '../config.js';
+import { BALANCE, BIOMES, BUILDINGS, GAME, MAP, QUESTS, RESOURCES, WORLD } from '../config.js';
 import { createState, defaultFlags, defaultMeta, defaultStats } from '../core/state.js';
-import { TILE, idx, inBounds, isClearable, clearedTileCode, setTile } from '../core/map.js';
+import { TILE, idx, inBounds, isClearable, clearedTileCode, padLegacyTiles, setTile } from '../core/map.js';
+import { activeIsland, createWorld, linkWorld, worldFromState } from '../core/world.js';
 
 /**
  * Migrations: MIGRATIONS[n] turns a version-n save into version n+1.
- * Example for the future:
- *   1: (data) => { data.state.meta.prestigeCount ??= 0; return data; },
  */
-export const MIGRATIONS = Object.freeze({});
+export const MIGRATIONS = Object.freeze({
+  /** v1 → v2: one island becomes a world; the 14×14 grid is centred in the bigger one. */
+  1: (data) => {
+    const st = data.state;
+    if (typeof st.tiles === 'string' && st.tiles.length === MAP.legacySize * MAP.legacySize) {
+      const { tiles, offset } = padLegacyTiles(st.tiles);
+      st.tiles = tiles;
+      if (Array.isArray(st.buildings)) {
+        for (const b of st.buildings) {
+          if (b && Number.isInteger(b.x) && Number.isInteger(b.y)) { b.x += offset; b.y += offset; }
+        }
+      }
+    }
+    st.biome = 'home';
+    data.world = { islands: [st], main: 0, active: 0, quests: st.quests, meta: st.meta, scout: null, seed: st.seed, found: 0 };
+    delete data.state;
+    return data;
+  },
+});
 
 export class SaveError extends Error {
   constructor(code, message) {
@@ -24,13 +43,22 @@ export class SaveError extends Error {
   }
 }
 
-const PERSIST = ['seed', 'time', 'res', 'pop', 'tiles', 'buildings', 'nextId', 'quests', 'stats', 'flags', 'meta', 'createdAt'];
+const PERSIST = ['seed', 'biome', 'time', 'res', 'pop', 'tiles', 'buildings', 'nextId', 'stats', 'flags', 'createdAt'];
 const QUEST_STATUS = new Set(['locked', 'active', 'done', 'claimed']);
 
-export function serialize(state, now, tab = null) {
-  const data = {};
-  for (const k of PERSIST) data[k] = state[k];
-  return JSON.stringify({ v: GAME.saveVersion, savedAt: now, tab, state: data });
+/** Serialises a world (or, for convenience, a single island state). */
+export function serialize(worldOrState, now, tab = null) {
+  const world = worldOrState.islands ? worldOrState : worldFromState(worldOrState);
+  const islands = world.islands.map((s) => {
+    const data = {};
+    for (const k of PERSIST) data[k] = s[k];
+    return data;
+  });
+  const out = {
+    main: world.main, active: world.active, scout: world.scout, seed: world.seed, found: world.found,
+    quests: world.quests, meta: world.meta, islands,
+  };
+  return JSON.stringify({ v: GAME.saveVersion, savedAt: now, tab, world: out });
 }
 
 /** Runs migrations from data.v up to `target`. */
@@ -58,15 +86,52 @@ export function parseSave(str, migrations = MIGRATIONS) {
   } catch {
     throw new SaveError('json');
   }
-  if (!data || typeof data !== 'object' || !data.state || typeof data.state !== 'object') {
-    throw new SaveError('format');
-  }
+  const body = data && typeof data === 'object' ? (data.world ?? data.state) : null;
+  if (!body || typeof body !== 'object') throw new SaveError('format');
   data = migrate(data, migrations);
+  if (!data.world || typeof data.world !== 'object') throw new SaveError('format');
+  const world = sanitizeWorld(data.world);
   return {
-    state: sanitize(data.state),
+    world,
+    state: activeIsland(world),
     savedAt: Number.isFinite(data.savedAt) ? data.savedAt : null,
     tab: typeof data.tab === 'string' ? data.tab : null,
   };
+}
+
+/** Rebuilds a valid world from untrusted data (islands, shared quests, scouting). */
+export function sanitizeWorld(raw) {
+  const list = Array.isArray(raw.islands) ? raw.islands.filter((x) => x && typeof x === 'object').slice(0, WORLD.maxIslands) : [];
+  if (!list.length) throw new SaveError('format', 'no islands');
+  const islands = list.map((isl) => sanitize({ ...isl, quests: raw.quests, meta: raw.meta }));
+  const count = islands.length;
+  const pick = (v, fallback) => (Number.isInteger(v) && v >= 0 && v < count ? v : fallback);
+  const world = {
+    islands,
+    main: pick(raw.main, 0),
+    active: 0,
+    quests: islands[0].quests,
+    meta: islands[0].meta,
+    scout: null,
+    seed: Number.isInteger(raw.seed) ? raw.seed >>> 0 : islands[0].seed,
+    found: Math.round(num(raw.found, 0, 0, 1e6)),
+  };
+  world.active = pick(raw.active, world.main);
+  const sc = raw.scout;
+  if (sc && typeof sc === 'object' && Number.isInteger(sc.from) && sc.from >= 0 && sc.from < count) {
+    if (Array.isArray(sc.offers)) {
+      const owned = new Set(islands.map((s) => s.biome));
+      const offers = sc.offers
+        .filter((o) => o && BIOMES[o.biome] && !owned.has(o.biome) && Number.isInteger(o.seed))
+        .slice(0, WORLD.offers)
+        .map((o) => ({ biome: o.biome, seed: o.seed >>> 0 }));
+      if (offers.length) world.scout = { from: sc.from, offers };
+    } else if (num(sc.left, 0, 0) > 0) {
+      const total = num(sc.total, WORLD.scoutTime, 1, 1e5);
+      world.scout = { from: sc.from, left: Math.min(num(sc.left, 0, 0), total), total };
+    }
+  }
+  return linkWorld(world);
 }
 
 const num = (v, fallback, min = -Infinity, max = Infinity) =>
@@ -75,7 +140,8 @@ const num = (v, fallback, min = -Infinity, max = Infinity) =>
 /** Rebuilds a valid state from untrusted data, repairing whatever is broken. */
 export function sanitize(raw) {
   const seed = Number.isInteger(raw.seed) ? raw.seed >>> 0 : MAP.defaultSeed;
-  const s = createState({ seed, now: num(raw.createdAt, 0, 0) });
+  const biome = BIOMES[raw.biome] ? raw.biome : 'home';
+  const s = createState({ seed, now: num(raw.createdAt, 0, 0), biome });
   const fresh = s.buildings[0];
 
   const total = MAP.size * MAP.size;
@@ -97,7 +163,8 @@ export function sanitize(raw) {
       if (!b || typeof b !== 'object' || !BUILDINGS[b.type]) continue;
       if (!Number.isInteger(b.x) || !Number.isInteger(b.y) || !inBounds(b.x, b.y)) continue;
       const tileIndex = idx(b.x, b.y);
-      if (usedTiles.has(tileIndex) || s.tiles[tileIndex] === TILE.WATER) continue;
+      const onWater = !!BUILDINGS[b.type].onWater;
+      if (usedTiles.has(tileIndex) || (s.tiles[tileIndex] === TILE.WATER) !== onWater) continue;
       if (isClearable(s.tiles[tileIndex])) s.tiles = setTile(s.tiles, b.x, b.y, clearedTileCode(s.tiles, b.x, b.y));
       let id = Number.isInteger(b.id) && b.id > 0 && !usedIds.has(b.id) ? b.id : 0;
       const spent = {};
@@ -161,6 +228,7 @@ export function sanitize(raw) {
   meta.prestige = num(rm.prestige, 0, 0);
   meta.prestigePoints = num(rm.prestigePoints, 0, 0);
   meta.prestigeCount = num(rm.prestigeCount, 0, 0);
+  meta.islands = Math.round(num(rm.islands, 1, 1, WORLD.maxIslands));
   s.meta = meta;
 
   s.rev = 0;
@@ -187,30 +255,34 @@ function findFreeSpot(state, cx, cy) {
  *       | 'corrupt' (nothing usable, new game) | 'newer' (save from a newer version; read-only)
  */
 export function loadGame(storage, { now, newSeed }) {
+  const fresh = () => {
+    const world = createWorld({ seed: newSeed, now });
+    return { world, state: activeIsland(world) };
+  };
   const main = storage.get(GAME.saveKey);
-  if (main == null) return { state: createState({ seed: newSeed, now }), status: 'new', savedAt: null };
+  if (main == null) return { ...fresh(), status: 'new', savedAt: null };
   try {
     const parsed = parseSave(main);
     storage.set(GAME.backupKey, main); // remember the last save that loaded fine
-    return { state: parsed.state, status: 'loaded', savedAt: parsed.savedAt };
+    return { world: parsed.world, state: parsed.state, status: 'loaded', savedAt: parsed.savedAt };
   } catch (error) {
     if (error.code === 'newer') {
-      return { state: createState({ seed: newSeed, now }), status: 'newer', savedAt: null, error, readOnly: true };
+      return { ...fresh(), status: 'newer', savedAt: null, error, readOnly: true };
     }
     storage.set(`${GAME.saveKey}.corrupt`, main);
     const backup = storage.get(GAME.backupKey);
     if (backup) {
       try {
         const parsed = parseSave(backup);
-        return { state: parsed.state, status: 'backup', savedAt: parsed.savedAt, error };
+        return { world: parsed.world, state: parsed.state, status: 'backup', savedAt: parsed.savedAt, error };
       } catch { /* fall through */ }
     }
-    return { state: createState({ seed: newSeed, now }), status: 'corrupt', savedAt: null, error };
+    return { ...fresh(), status: 'corrupt', savedAt: null, error };
   }
 }
 
-export function writeSave(storage, state, now, tab) {
-  return storage.set(GAME.saveKey, serialize(state, now, tab));
+export function writeSave(storage, world, now, tab) {
+  return storage.set(GAME.saveKey, serialize(world, now, tab));
 }
 
 export function clearSave(storage) {

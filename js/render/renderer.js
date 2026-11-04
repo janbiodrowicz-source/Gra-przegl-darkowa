@@ -275,7 +275,7 @@ export function createRenderer({ canvas, game, ui, bus }) {
   function rebakeTerrain() {
     if (!state) return;
     const scale = Math.min(spriteScale, 3);
-    terrain = bakeTerrain(state.tiles, scale, state.seed);
+    terrain = bakeTerrain(state.tiles, scale, state.seed, state.biome);
     terrainVersion++;
   }
 
@@ -302,7 +302,8 @@ export function createRenderer({ canvas, game, ui, bus }) {
   }
 
   function treeSprite(v, onSand) {
-    return sprite(`t:${v}:${onSand ? 1 : 0}`, BOX_TREE, (g) => drawTree(g, (v + 0.5) / TREE_VARIANTS, onSand));
+    const biome = state?.biome || 'home';
+    return sprite(`t:${biome}:${v}:${onSand ? 1 : 0}`, BOX_TREE, (g) => drawTree(g, (v + 0.5) / TREE_VARIANTS, onSand, biome));
   }
 
   function rockSprite(v) {
@@ -431,7 +432,7 @@ export function createRenderer({ canvas, game, ui, bus }) {
     const g = c.getContext('2d');
     const tier = tierOf(level);
     const h = buildingHeight(type, tier);
-    const wide = type === 'field' || type === 'warehouse' || type === 'sawmill' || type === 'fisher' || type === 'fountain' || type === 'mill';
+    const wide = type === 'field' || type === 'warehouse' || type === 'sawmill' || type === 'fisher' || type === 'fountain' || type === 'mill' || type === 'port';
     const crop = { x0: wide ? -38 : -32, y0: -(h + 6), w: wide ? 76 : 64, h: h + 6 + (type === 'field' ? 22 : 18) };
     const k = Math.min(c.width / crop.w, c.height / crop.h);
     g.translate(c.width / 2, (c.height - crop.h * k) / 2 - crop.y0 * k);
@@ -879,11 +880,18 @@ export function createRenderer({ canvas, game, ui, bus }) {
     ctx.stroke();
   }
 
+  /** Extra input for animated parts: the harbour's ship is away while it scouts from this island. */
+  function dynamicExtra(type) {
+    if (type !== 'port') return null;
+    const w = game.world, sc = w?.scout;
+    return { away: !!(sc && sc.left > 0 && w.islands[sc.from] === state) };
+  }
+
   function drawBuildingDynamicAt(type, tier, x, y, t, phase) {
     if (type === 'hut') return;
     ctx.save();
     ctx.translate(x, y);
-    drawBuildingDynamic(ctx, type, tier, t, phase);
+    drawBuildingDynamic(ctx, type, tier, t, phase, dynamicExtra(type));
     ctx.restore();
   }
 
@@ -937,7 +945,7 @@ export function createRenderer({ canvas, game, ui, bus }) {
         ctx.translate(bx, by + lift);
         ctx.scale(sx, sy);
         blit(sp, 0, 0);
-        drawBuildingDynamic(ctx, b.type, tier, t, b.id * 0.7);
+        drawBuildingDynamic(ctx, b.type, tier, t, b.id * 0.7, dynamicExtra(b.type));
         ctx.restore();
       } else {
         blit(sp, bx, by);

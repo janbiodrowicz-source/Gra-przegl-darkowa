@@ -47,11 +47,21 @@ export function islandBounds(tiles, margin = 46) {
   return { x: minX - margin, y: minY - margin, w: maxX - minX + margin * 2, h: maxY - minY + margin * 2 };
 }
 
+/** Ground colours per biome (grass tops, grass lip, grass/sand cliff tops, tufts, flower chance). */
+export const GROUND = {
+  home: { g: ['#8ace66', '#86ca62'], s: ['#f3dba1', '#f1d89b'], lip: ['#5e9f45', '#6eb352'], edge: ['#6aa94d', '#79b95a'], tuft: 'rgba(70, 130, 50, 0.55)', flowers: 0.62 },
+  forest: { g: ['#73b957', '#6fb553'], s: ['#ead39a', '#e7cf95'], lip: ['#4c8a3a', '#5a9a45'], edge: ['#588f40', '#649f4b'], tuft: 'rgba(50, 105, 40, 0.6)', flowers: 0.8 },
+  snow: { g: ['#eef4f7', '#e8f0f4'], s: ['#dfe6ea', '#d9e1e6'], lip: ['#b9c7d0', '#c8d4dc'], edge: ['#c3d0d8', '#d2dde4'], tuft: 'rgba(150, 175, 190, 0.5)', flowers: 2 },
+  tropic: { g: ['#8fd96a', '#8ad566'], s: ['#fbe9b8', '#f9e5b0'], lip: ['#62a84a', '#72b955'], edge: ['#6cb04f', '#7bc15d'], tuft: 'rgba(70, 140, 50, 0.5)', flowers: 0.5 },
+  fertile: { g: ['#9bcf5e', '#96cb5a'], s: ['#efd59c', '#edd297'], lip: ['#6f9f3e', '#7fb04a'], edge: ['#7aa748', '#88b654'], tuft: 'rgba(95, 135, 45, 0.55)', flowers: 0.55 },
+};
+
 /**
  * Bakes the island at `scale` (canvas px per world px).
  * @returns {{ canvas: HTMLCanvasElement, x: number, y: number, w: number, h: number, scale: number }}
  */
-export function bakeTerrain(tiles, scale, seed = 0) {
+export function bakeTerrain(tiles, scale, seed = 0, biome = 'home') {
+  const P = GROUND[biome] || GROUND.home;
   const b = islandBounds(tiles);
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(b.w * scale);
@@ -105,12 +115,12 @@ export function bakeTerrain(tiles, scale, seed = 0) {
     g.lineTo(SX(x, y + 1), SY(x, y + 1, z));
     g.closePath();
     if (c === 'g') {
-      g.fillStyle = (x + y) % 2 ? '#8ace66' : '#86ca62';
+      g.fillStyle = P.g[(x + y) % 2];
       g.fill();
       g.fillStyle = `rgba(255, 255, 220, ${0.04 + v * 0.06})`;
       g.fill();
     } else {
-      g.fillStyle = (x + y) % 2 ? '#f3dba1' : '#f1d89b';
+      g.fillStyle = P.s[(x + y) % 2];
       g.fill();
       g.fillStyle = `rgba(255, 250, 230, ${0.05 + v * 0.08})`;
       g.fill();
@@ -137,19 +147,19 @@ export function bakeTerrain(tiles, scale, seed = 0) {
       g.closePath();
       if (!toSea) {
         // grass lip over sand
-        g.fillStyle = f.dark ? '#5e9f45' : '#6eb352';
+        g.fillStyle = f.dark ? P.lip[0] : P.lip[1];
         g.fill();
         continue;
       }
       const grad = g.createLinearGradient(0, Math.min(ayTop, byTop), 0, Math.max(ayBot, byBot));
       if (f.dark) {
-        grad.addColorStop(0, c === 'g' ? '#6aa94d' : '#d9b978');
-        grad.addColorStop(0.18, c === 'g' ? '#6aa94d' : '#d9b978');
+        grad.addColorStop(0, c === 'g' ? P.edge[0] : '#d9b978');
+        grad.addColorStop(0.18, c === 'g' ? P.edge[0] : '#d9b978');
         grad.addColorStop(0.2, '#b98756');
         grad.addColorStop(1, '#8c5f38');
       } else {
-        grad.addColorStop(0, c === 'g' ? '#79b95a' : '#ead08f');
-        grad.addColorStop(0.18, c === 'g' ? '#79b95a' : '#ead08f');
+        grad.addColorStop(0, c === 'g' ? P.edge[1] : '#ead08f');
+        grad.addColorStop(0.18, c === 'g' ? P.edge[1] : '#ead08f');
         grad.addColorStop(0.2, '#cd9a64');
         grad.addColorStop(1, '#a87445');
       }
@@ -179,7 +189,7 @@ export function bakeTerrain(tiles, scale, seed = 0) {
       for (let i = 0; i < tufts; i++) {
         const ox = (hash2(x * 7 + i, y, seed + 3) - 0.5) * 34;
         const oy = (hash2(x, y * 7 + i, seed + 5) - 0.5) * 14;
-        g.strokeStyle = 'rgba(70, 130, 50, 0.55)';
+        g.strokeStyle = P.tuft;
         g.lineWidth = 1.1;
         g.beginPath();
         g.moveTo(cx + ox - 2, cy + oy);
@@ -191,7 +201,7 @@ export function bakeTerrain(tiles, scale, seed = 0) {
         g.stroke();
       }
       // flowers
-      if (r2 > 0.62) {
+      if (r2 > P.flowers) {
         const colors = ['#ffffff', '#ffd166', '#ff9ab2', '#c9a7ff'];
         const col = colors[Math.floor(r3 * colors.length)];
         const n = 2 + Math.floor(r1 * 3);

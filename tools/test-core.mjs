@@ -4,8 +4,8 @@
  * The core is DOM-free, so the exact same modules the browser uses run here.
  */
 import assert from 'node:assert/strict';
-import { BALANCE, BUILDINGS, GAME, MAP, QUESTS, RESOURCES } from '../js/config.js';
-import { N, TILE, generateIsland, idx, isBuildable, isClearable, tileAt } from '../js/core/map.js';
+import { BALANCE, BUILDINGS, GAME, MAP, QUESTS, RESOURCES, WORLD } from '../js/config.js';
+import { N, TILE, generateIsland, idx, isBuildable, isClearable, isShoreWater, seaMask, tileAt } from '../js/core/map.js';
 import { createState } from '../js/core/state.js';
 import * as eco from '../js/core/economy.js';
 import { derive, getRates, simulate, tick, timeToAfford, buildingInfo, invalidate as invalidateRates } from '../js/core/sim.js';
@@ -15,6 +15,7 @@ import { canPrestige, applyPrestige } from '../js/core/prestige.js';
 import { SaveError, loadGame, loadSettings, migrate, parseSave, sanitize, serialize, writeSave } from '../js/save/save.js';
 import { DICTS, setLang, t } from '../js/i18n.js';
 import { createBus } from '../js/core/events.js';
+import { colonize, createWorld, linkWorld, scoutBlocker, setActive, setMain, simulateWorld, startScout, tickWorld } from '../js/core/world.js';
 
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
@@ -545,14 +546,166 @@ test('second wave unlocks follow the quest chain; old finished saves continue', 
     assert.ok(QUESTS.some((x) => x.id === q), `${type} unlock quest exists`);
   }
   // a v1 save from before the update: all five original quests claimed
-  const s = createState({ seed: 80 });
-  const raw = JSON.parse(serialize(s, 0)).state;
-  raw.quests = { q1: 'claimed', q2: 'claimed', q3: 'claimed', q4: 'claimed', q5: 'claimed' };
-  const fixed = sanitize(raw);
+  const v1 = legacySave({ q1: 'claimed', q2: 'claimed', q3: 'claimed', q4: 'claimed', q5: 'claimed' });
+  const { state: fixed } = parseSave(v1.str);
   assert.equal(fixed.quests.q6, 'active');
   assert.equal(fixed.quests.q7, 'locked');
   assert.ok(eco.isUnlocked(fixed, 'fisher'));
   assert.ok(!eco.isUnlocked(fixed, 'mill'));
+});
+
+
+/** A real v1 save string: 14×14 grid, one island under `state`. */
+function legacySave(quests = null) {
+  const s = createState({ seed: 81 });
+  const off = Math.floor((N - MAP.legacySize) / 2);
+  let tiles = '';
+  for (let y = 0; y < MAP.legacySize; y++) for (let x = 0; x < MAP.legacySize; x++) tiles += s.tiles[idx(x + off, y + off)];
+  const buildings = s.buildings.map((b) => ({ ...b, x: b.x - off, y: b.y - off }));
+  const state = { seed: s.seed, time: 120, res: { wood: 77, stone: 5, food: 30, coins: 9 }, pop: 3, tiles, buildings,
+    nextId: s.nextId, quests: quests || s.quests, stats: s.stats, flags: s.flags, meta: { prestige: 0, prestigePoints: 0, prestigeCount: 0 }, createdAt: 1 };
+  return { str: JSON.stringify({ v: 1, savedAt: 1000, tab: 'old', state }), original: s, off };
+}
+
+/* ---------------- archipelago ---------------- */
+
+test('v1 saves migrate: tiles centred in the bigger grid, buildings shifted, resources kept', () => {
+  const { str, original } = legacySave();
+  const { world, state, savedAt } = parseSave(str);
+  assert.equal(savedAt, 1000);
+  assert.equal(world.islands.length, 1);
+  assert.equal(state.biome, 'home');
+  assert.equal(state.tiles.length, N * N);
+  // the island lands exactly where a fresh one of that seed would be
+  for (let i = 0; i < N * N; i++) {
+    const x = i % N, y = Math.floor(i / N);
+    const off = Math.floor((N - MAP.legacySize) / 2);
+    const inside = x >= off && y >= off && x < off + MAP.legacySize && y < off + MAP.legacySize;
+    if (inside) assert.equal(state.tiles[i], original.tiles[i]);
+  }
+  assert.deepEqual([state.buildings[0].x, state.buildings[0].y], [original.buildings[0].x, original.buildings[0].y]);
+  assert.equal(state.res.wood, 77);
+  // and it saves back as v2
+  const again = JSON.parse(serialize(world, 2000));
+  assert.equal(again.v, GAME.saveVersion);
+  assert.ok(Array.isArray(again.world.islands));
+});
+
+function portWorld(seed = 90) {
+  const world = createWorld({ seed });
+  const s = world.islands[0];
+  for (const q of QUESTS.slice(0, 14)) s.quests[q.id] = 'claimed';
+  s.quests.q15 = 'active';
+  rich(s, 9000);
+  let coast = null;
+  for (let i = 0; i < N * N && !coast; i++) if (isShoreWater(s.tiles, i % N, Math.floor(i / N))) coast = { x: i % N, y: Math.floor(i / N) };
+  return { world, s, coast };
+}
+
+test('port: on the sea by the shore (never on land or a pond), one per island', () => {
+  const { world, s, coast } = portWorld();
+  const land = freeTile(s);
+  assert.equal(actions.canPlace(s, 'port', land.x, land.y).reason, 'notShore');
+  const pond = findTile(s, TILE.WATER) && (() => {
+    for (let i = 0; i < N * N; i++) if (s.tiles[i] === TILE.WATER && !seaMask(s.tiles)[i]) return { x: i % N, y: Math.floor(i / N) };
+    return null;
+  })();
+  if (pond) assert.equal(actions.canPlace(s, 'port', pond.x, pond.y).reason, 'notShore');
+  assert.equal(actions.canPlace(s, 'port', 0, 0).reason, 'notShore'); // open sea, far from land
+  const r = actions.build(s, 'port', coast.x, coast.y);
+  assert.ok(r.ok, r.reason);
+  assert.equal(s.quests.q15, 'done');
+  let other = null;
+  for (let i = 0; i < N * N && !other; i++) {
+    const x = i % N, y = Math.floor(i / N);
+    if (isShoreWater(s.tiles, x, y) && !eco.buildingAt(s, x, y)) other = { x, y };
+  }
+  assert.equal(actions.canPlace(s, 'port', other.x, other.y).reason, 'limit');
+  // a port on the water survives a save round-trip
+  const back = parseSave(serialize(world, 1)).state;
+  assert.ok(back.buildings.some((b) => b.type === 'port' && b.x === coast.x && b.y === coast.y));
+  assert.ok(world.islands[0].quests === world.quests);
+});
+
+test('scouting: needs a port, takes time, offers unowned biomes; colonising adds an island', () => {
+  const { world, s, coast } = portWorld(91);
+  assert.equal(scoutBlocker(world, 0), 'noPort');
+  assert.ok(actions.build(s, 'port', coast.x, coast.y).ok);
+  assert.ok(actions.claimQuest(s, 'q15').ok);
+  rich(s, 9000);
+  const r = startScout(world, 0);
+  assert.ok(r.ok, r.reason);
+  assert.equal(scoutBlocker(world, 0), 'scoutBusy');
+  const out = [];
+  tickWorld(world, WORLD.scoutTime - 1, out);
+  assert.ok(!out.some((e) => e.type === 'scoutReturned'));
+  tickWorld(world, 2, out);
+  assert.ok(out.some((e) => e.type === 'scoutReturned'));
+  const offers = world.scout.offers;
+  assert.equal(offers.length, WORLD.offers);
+  assert.ok(offers.every((o) => o.biome !== 'home'));
+  assert.equal(new Set(offers.map((o) => o.biome)).size, offers.length);
+  rich(s, 9000);
+  const c = colonize(world, 1, 0);
+  assert.ok(c.ok, c.reason);
+  assert.equal(world.islands.length, 2);
+  const isl = world.islands[1];
+  assert.equal(isl.biome, offers[1].biome);
+  assert.equal(world.meta.islands, 2);
+  assert.ok(isl.quests === world.quests && isl.meta === world.meta);
+  assert.equal(world.quests.q16, 'done'); // settling completes the quest right away
+  assert.equal(world.scout, null);
+  // the new island has its own map, buildings and resources
+  assert.notEqual(isl.tiles, s.tiles);
+  assert.equal(isl.buildings.length, 1);
+  // switching and main island
+  assert.ok(setActive(world, 1).ok);
+  assert.equal(world.active, 1);
+  assert.ok(setMain(world, 1).ok);
+  assert.equal(world.main, 1);
+});
+
+test('every island keeps working in the background and offline', () => {
+  const { world } = portWorld(92);
+  const second = createState({ seed: 5, biome: 'forest' });
+  world.islands.push(second);
+  linkWorld(world);
+  const t0 = [world.islands[0].time, second.time];
+  tickWorld(world, 10, []);
+  assert.ok(Math.abs(world.islands[0].time - t0[0] - 10) < 1e-9);
+  assert.ok(Math.abs(second.time - t0[1] - 10) < 1e-9);
+  const rep = simulateWorld(world, 600);
+  assert.equal(rep.others.length, 1);
+  assert.ok(Math.abs(second.time - t0[1] - 610) < 1e-6);
+  // biome multipliers apply to production
+  const spot = freeTile(second, (x, y) => !eco.isCoastal(second, x, y));
+  rich(second, 500);
+  actions.build(second, 'sawmill', spot.x, spot.y);
+  const prev = actions.placementPreview(second, 'sawmill', spot.x, spot.y);
+  assert.ok(prev.rate.wood > BUILDINGS.sawmill.produce.wood * 1.49);
+});
+
+test('v2 save round-trip keeps islands, main/active and the scouting trip', () => {
+  const { world } = portWorld(93);
+  world.islands.push(createState({ seed: 6, biome: 'snow' }));
+  linkWorld(world);
+  world.main = 1;
+  world.active = 1;
+  world.scout = { from: 0, left: 40, total: 150 };
+  const back = parseSave(serialize(world, 10)).world;
+  assert.equal(back.islands.length, 2);
+  assert.equal(back.islands[1].biome, 'snow');
+  assert.equal(back.islands[1].tiles, world.islands[1].tiles);
+  assert.equal(back.main, 1);
+  assert.deepEqual(back.scout, { from: 0, left: 40, total: 150 });
+  assert.ok(back.islands[1].quests === back.quests);
+  // garbage in the scout field is dropped, broken indexes fall back
+  const raw = JSON.parse(serialize(world, 10));
+  raw.world.scout = { from: 9, left: 'x' };
+  raw.world.main = 7;
+  const fixed = parseSave(JSON.stringify(raw)).world;
+  assert.equal(fixed.scout, null);
+  assert.equal(fixed.main, 0);
 });
 
 /* ---------------- i18n & bus ---------------- */

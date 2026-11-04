@@ -29,6 +29,8 @@ export function questProgress(state, quest) {
     }
     case 'cleared':
       return { cur: Math.min(state.stats.cleared, g.count), max: g.count };
+    case 'islands':
+      return { cur: Math.min(state.meta?.islands ?? 1, g.count), max: g.count };
     case 'charm':
       return { cur: Math.min(totalCharm(state), g.amount), max: g.amount };
     case 'resource':
