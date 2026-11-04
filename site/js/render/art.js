@@ -7,7 +7,7 @@
  * Light comes from the top-left: tops are lightest, +y faces (screen
  * bottom-left) are mid, +x faces (screen bottom-right) are darkest.
  */
-import { HW, HH } from './iso.js?v=0.3.2';
+import { HW, HH } from './iso.js?v=0.3.3';
 
 const PX = (x, y) => (x - y) * HW;
 const PY = (x, y, z) => (x + y) * HH - z;

@@ -4,9 +4,9 @@
  * Trees/rocks are NOT part of it (they are depth-sorted objects), so clearing
  * them never invalidates the bake.
  */
-import { N } from '../core/map.js?v=0.3.2';
-import { hash2 } from '../core/rng.js?v=0.3.2';
-import { CLIFF, HH, HW, LIP, groundCode, groundZ } from './iso.js?v=0.3.2';
+import { N } from '../core/map.js?v=0.3.3';
+import { hash2 } from '../core/rng.js?v=0.3.3';
+import { CLIFF, HH, HW, LIP, groundCode, groundZ } from './iso.js?v=0.3.3';
 
 const SX = (gx, gy) => (gx - gy) * HW;
 const SY = (gx, gy, z) => (gx + gy) * HH - z;

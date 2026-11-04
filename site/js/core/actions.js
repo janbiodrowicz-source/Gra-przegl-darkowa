@@ -2,15 +2,15 @@
  * Player commands. Each returns { ok: true, events, ... } or { ok: false, reason }.
  * Reasons map to i18n keys `reason.<reason>`.
  */
-import { BALANCE, BUILDINGS } from '../config.js?v=0.3.2';
+import { BALANCE, BUILDINGS } from '../config.js?v=0.3.3';
 import {
   adjacencyBonus, atLimit, auraOf, auraTargetsAt, baseRateOf, charmOf, isCoastal, withBiome, buildCost, buildingAt, canAfford, capsOf, clampToCaps,
   countType, getBuilding, grant, isUnlocked, pay, refundOf, upgradeCost, addInto, occupancy, occKey,
-} from './economy.js?v=0.3.2';
-import { N, NEIGHBORS8, TILE, clearedTileCode, idx, inBounds, isBuildable, isClearable, isShoreWater, setTile } from './map.js?v=0.3.2';
-import { updateQuests } from './quests.js?v=0.3.2';
+} from './economy.js?v=0.3.3';
+import { N, NEIGHBORS8, TILE, clearedTileCode, idx, inBounds, isBuildable, isClearable, isShoreWater, setTile } from './map.js?v=0.3.3';
+import { updateQuests } from './quests.js?v=0.3.3';
 
-export { claimQuest } from './quests.js?v=0.3.2';
+export { claimQuest } from './quests.js?v=0.3.3';
 
 const fail = (reason, extra = {}) => ({ ok: false, reason, ...extra });
 

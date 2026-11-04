@@ -7,7 +7,7 @@
  * reset the island (new seed) while keeping meta, and apply a global
  * production multiplier of (1 + prestigePoints * k).
  */
-import { PRESTIGE } from '../config.js?v=0.3.2';
+import { PRESTIGE } from '../config.js?v=0.3.3';
 
 export function isPrestigeEnabled() {
   return PRESTIGE.enabled;

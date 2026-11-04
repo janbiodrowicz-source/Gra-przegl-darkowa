@@ -2,8 +2,8 @@
  * UI "juice": resource icons flying into the HUD, chip bumps and confetti.
  * Web Animations API + transform/opacity only; skipped for reduced motion.
  */
-import { icon } from './icons.js?v=0.3.2';
-import { retrigger } from './dom.js?v=0.3.2';
+import { icon } from './icons.js?v=0.3.3';
+import { retrigger } from './dom.js?v=0.3.3';
 
 export const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 

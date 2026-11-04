@@ -3,8 +3,8 @@
  * runtime-only field is `rev` (bumped whenever buildings or tiles change,
  * used to invalidate derived-data caches).
  */
-import { BALANCE, GAME, QUESTS, RESOURCES } from '../config.js?v=0.3.2';
-import { generateIsland } from './map.js?v=0.3.2';
+import { BALANCE, GAME, QUESTS, RESOURCES } from '../config.js?v=0.3.3';
+import { generateIsland } from './map.js?v=0.3.3';
 
 export function defaultStats() {
   const produced = {};

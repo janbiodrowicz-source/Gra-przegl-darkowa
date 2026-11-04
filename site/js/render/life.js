@@ -3,9 +3,9 @@
  * around water, trees and houses), gulls circling the island and soft cloud
  * shadows drifting over it. Purely visual — the game state is never touched.
  */
-import { N, idx, inBounds } from '../core/map.js?v=0.3.2';
-import { hash2 } from '../core/rng.js?v=0.3.2';
-import { HH, HW, groundZ } from './iso.js?v=0.3.2';
+import { N, idx, inBounds } from '../core/map.js?v=0.3.3';
+import { hash2 } from '../core/rng.js?v=0.3.3';
+import { HH, HW, groundZ } from './iso.js?v=0.3.3';
 
 const TAU = Math.PI * 2;
 const SHIRTS = ['#1aa394', '#e3794d', '#f2b632', '#8e6fd8', '#4f86c6', '#d6587a', '#5daa4f'];

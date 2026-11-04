@@ -4,18 +4,18 @@
  * The core is DOM-free, so the exact same modules the browser uses run here.
  */
 import assert from 'node:assert/strict';
-import { BALANCE, BUILDINGS, GAME, MAP, QUESTS, RESOURCES, WORLD } from '../site/js/config.js?v=0.3.2';
-import { N, TILE, generateIsland, idx, isBuildable, isClearable, isShoreWater, seaMask, tileAt } from '../site/js/core/map.js?v=0.3.2';
-import { createState } from '../site/js/core/state.js?v=0.3.2';
-import * as eco from '../site/js/core/economy.js?v=0.3.2';
-import { derive, getRates, simulate, tick, timeToAfford, buildingInfo, invalidate as invalidateRates } from '../site/js/core/sim.js?v=0.3.2';
-import * as actions from '../site/js/core/actions.js?v=0.3.2';
-import { questProgress, currentQuest } from '../site/js/core/quests.js?v=0.3.2';
-import { canPrestige, applyPrestige } from '../site/js/core/prestige.js?v=0.3.2';
-import { SaveError, loadGame, loadSettings, migrate, parseSave, sanitize, serialize, writeSave } from '../site/js/save/save.js?v=0.3.2';
-import { DICTS, setLang, t } from '../site/js/i18n.js?v=0.3.2';
-import { createBus } from '../site/js/core/events.js?v=0.3.2';
-import { colonize, createWorld, linkWorld, scoutBlocker, setActive, setMain, simulateWorld, startScout, tickWorld } from '../site/js/core/world.js?v=0.3.2';
+import { BALANCE, BUILDINGS, GAME, MAP, QUESTS, RESOURCES, WORLD } from '../site/js/config.js?v=0.3.3';
+import { N, TILE, generateIsland, idx, isBuildable, isClearable, isShoreWater, seaMask, tileAt } from '../site/js/core/map.js?v=0.3.3';
+import { createState } from '../site/js/core/state.js?v=0.3.3';
+import * as eco from '../site/js/core/economy.js?v=0.3.3';
+import { derive, getRates, simulate, tick, timeToAfford, buildingInfo, invalidate as invalidateRates } from '../site/js/core/sim.js?v=0.3.3';
+import * as actions from '../site/js/core/actions.js?v=0.3.3';
+import { questProgress, currentQuest } from '../site/js/core/quests.js?v=0.3.3';
+import { canPrestige, applyPrestige } from '../site/js/core/prestige.js?v=0.3.3';
+import { SaveError, loadGame, loadSettings, migrate, parseSave, sanitize, serialize, writeSave } from '../site/js/save/save.js?v=0.3.3';
+import { DICTS, setLang, t } from '../site/js/i18n.js?v=0.3.3';
+import { createBus } from '../site/js/core/events.js?v=0.3.3';
+import { colonize, createWorld, linkWorld, scoutBlocker, setActive, setMain, simulateWorld, startScout, tickWorld } from '../site/js/core/world.js?v=0.3.3';
 
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });

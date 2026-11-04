@@ -3,24 +3,24 @@
  * builds the DOM components, refreshes them ~10×/s, reacts to game events
  * and exposes a small API for the map/input layer (stage c).
  */
-import { BALANCE, BUILDING_ORDER, QUESTS } from '../config.js?v=0.3.2';
-import { onLangChange, setLang, t } from '../i18n.js?v=0.3.2';
-import { buildCost, buildingAt, canAfford, countType, isUnlocked } from '../core/economy.js?v=0.3.2';
-import { suggestSpot } from '../core/actions.js?v=0.3.2';
-import { getRates } from '../core/sim.js?v=0.3.2';
-import { currentQuest } from '../core/quests.js?v=0.3.2';
-import { idx, inBounds } from '../core/map.js?v=0.3.2';
-import { h, retrigger, setClass } from './dom.js?v=0.3.2';
-import { amounts, icon } from './icons.js?v=0.3.2';
-import { fmt, fmtPct, fmtRate } from './format.js?v=0.3.2';
-import { createHud } from './hud.js?v=0.3.2';
-import { bump, centerOf, confetti, flyResources } from './juice.js?v=0.3.2';
-import { createBuildBar } from './buildbar.js?v=0.3.2';
-import { createPanel } from './panel.js?v=0.3.2';
-import { createToasts } from './toasts.js?v=0.3.2';
-import { conflictDialog, createModalLayer, questsDialog, settingsDialog, welcomeDialog } from './modals.js?v=0.3.2';
-import { islandName, islandsDialog, offersDialog } from './islands.js?v=0.3.2';
-import { fmtClock } from './format.js?v=0.3.2';
+import { BALANCE, BUILDING_ORDER, QUESTS } from '../config.js?v=0.3.3';
+import { onLangChange, setLang, t } from '../i18n.js?v=0.3.3';
+import { buildCost, buildingAt, canAfford, countType, isUnlocked } from '../core/economy.js?v=0.3.3';
+import { suggestSpot } from '../core/actions.js?v=0.3.3';
+import { getRates } from '../core/sim.js?v=0.3.3';
+import { currentQuest } from '../core/quests.js?v=0.3.3';
+import { idx, inBounds } from '../core/map.js?v=0.3.3';
+import { h, retrigger, setClass } from './dom.js?v=0.3.3';
+import { amounts, icon } from './icons.js?v=0.3.3';
+import { fmt, fmtPct, fmtRate } from './format.js?v=0.3.3';
+import { createHud } from './hud.js?v=0.3.3';
+import { bump, centerOf, confetti, flyResources } from './juice.js?v=0.3.3';
+import { createBuildBar } from './buildbar.js?v=0.3.3';
+import { createPanel } from './panel.js?v=0.3.3';
+import { createToasts } from './toasts.js?v=0.3.3';
+import { conflictDialog, createModalLayer, questsDialog, settingsDialog, welcomeDialog } from './modals.js?v=0.3.3';
+import { islandName, islandsDialog, offersDialog } from './islands.js?v=0.3.3';
+import { fmtClock } from './format.js?v=0.3.3';
 
 const defaultArt = (type) => h('span.art-svg', { html: icon(type) });
 
