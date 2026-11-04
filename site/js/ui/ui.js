@@ -3,24 +3,24 @@
  * builds the DOM components, refreshes them ~10×/s, reacts to game events
  * and exposes a small API for the map/input layer (stage c).
  */
-import { BALANCE, BUILDING_ORDER, QUESTS } from '../config.js';
-import { onLangChange, setLang, t } from '../i18n.js';
-import { buildCost, buildingAt, canAfford, countType, isUnlocked } from '../core/economy.js';
-import { suggestSpot } from '../core/actions.js';
-import { getRates } from '../core/sim.js';
-import { currentQuest } from '../core/quests.js';
-import { idx, inBounds } from '../core/map.js';
-import { h, retrigger, setClass } from './dom.js';
-import { amounts, icon } from './icons.js';
-import { fmt, fmtPct, fmtRate } from './format.js';
-import { createHud } from './hud.js';
-import { bump, centerOf, confetti, flyResources } from './juice.js';
-import { createBuildBar } from './buildbar.js';
-import { createPanel } from './panel.js';
-import { createToasts } from './toasts.js';
-import { conflictDialog, createModalLayer, questsDialog, settingsDialog, welcomeDialog } from './modals.js';
-import { islandName, islandsDialog, offersDialog } from './islands.js';
-import { fmtClock } from './format.js';
+import { BALANCE, BUILDING_ORDER, QUESTS } from '../config.js?v=0.3.1';
+import { onLangChange, setLang, t } from '../i18n.js?v=0.3.1';
+import { buildCost, buildingAt, canAfford, countType, isUnlocked } from '../core/economy.js?v=0.3.1';
+import { suggestSpot } from '../core/actions.js?v=0.3.1';
+import { getRates } from '../core/sim.js?v=0.3.1';
+import { currentQuest } from '../core/quests.js?v=0.3.1';
+import { idx, inBounds } from '../core/map.js?v=0.3.1';
+import { h, retrigger, setClass } from './dom.js?v=0.3.1';
+import { amounts, icon } from './icons.js?v=0.3.1';
+import { fmt, fmtPct, fmtRate } from './format.js?v=0.3.1';
+import { createHud } from './hud.js?v=0.3.1';
+import { bump, centerOf, confetti, flyResources } from './juice.js?v=0.3.1';
+import { createBuildBar } from './buildbar.js?v=0.3.1';
+import { createPanel } from './panel.js?v=0.3.1';
+import { createToasts } from './toasts.js?v=0.3.1';
+import { conflictDialog, createModalLayer, questsDialog, settingsDialog, welcomeDialog } from './modals.js?v=0.3.1';
+import { islandName, islandsDialog, offersDialog } from './islands.js?v=0.3.1';
+import { fmtClock } from './format.js?v=0.3.1';
 
 const defaultArt = (type) => h('span.art-svg', { html: icon(type) });
 

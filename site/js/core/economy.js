@@ -3,8 +3,8 @@
  * Nothing here mutates state except the explicit resource helpers
  * (pay / grant) that work on a plain resource object.
  */
-import { BALANCE, BIOMES, BUILDINGS, CAPPED, RESOURCES, QUESTS } from '../config.js';
-import { NEIGHBORS8, TILE_KINDS, tileAt } from './map.js';
+import { BALANCE, BIOMES, BUILDINGS, CAPPED, RESOURCES, QUESTS } from '../config.js?v=0.3.1';
+import { NEIGHBORS8, TILE_KINDS, tileAt } from './map.js?v=0.3.1';
 
 /* ---------------- resource helpers ---------------- */
 

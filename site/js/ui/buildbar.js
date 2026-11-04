@@ -2,15 +2,15 @@
  * Bottom bar: building cards (cost, time-to-afford, locks) and the placement
  * bar that replaces them while a building is being placed (✕ / info / ✓).
  */
-import { BUILDING_ORDER, BUILDINGS } from '../config.js';
-import { t } from '../i18n.js';
-import { buildCost, canAfford, countType, isUnlocked } from '../core/economy.js';
-import { canPlace, placementPreview } from '../core/actions.js';
-import { getQuest } from '../core/quests.js';
-import { timeToAfford } from '../core/sim.js';
-import { h, retrigger, setClass, setText } from './dom.js';
-import { amounts, chip, icon } from './icons.js';
-import { fmt, fmtClock, fmtPct } from './format.js';
+import { BUILDING_ORDER, BUILDINGS } from '../config.js?v=0.3.1';
+import { t } from '../i18n.js?v=0.3.1';
+import { buildCost, canAfford, countType, isUnlocked } from '../core/economy.js?v=0.3.1';
+import { canPlace, placementPreview } from '../core/actions.js?v=0.3.1';
+import { getQuest } from '../core/quests.js?v=0.3.1';
+import { timeToAfford } from '../core/sim.js?v=0.3.1';
+import { h, retrigger, setClass, setText } from './dom.js?v=0.3.1';
+import { amounts, chip, icon } from './icons.js?v=0.3.1';
+import { fmt, fmtClock, fmtPct } from './format.js?v=0.3.1';
 
 export function createBuildBar({ onCard, onConfirm, onCancel, artFor }) {
   const cards = {};

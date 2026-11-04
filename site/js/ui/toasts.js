@@ -1,6 +1,6 @@
 /** Toast notifications: short, stacked, de-duplicated. */
-import { h, retrigger } from './dom.js';
-import { icon } from './icons.js';
+import { h, retrigger } from './dom.js?v=0.3.1';
+import { icon } from './icons.js?v=0.3.1';
 
 const MAX = 3;
 

@@ -4,13 +4,13 @@
  * autosave and multi-tab conflicts. It knows nothing about the DOM UI or the
  * canvas — those subscribe to the bus and register frame hooks.
  */
-import { GAME } from './config.js';
-import * as actions from './core/actions.js';
-import * as worldActions from './core/world.js';
-import { activeIsland, createWorld, simulateWorld, tickWorld, worldFromState } from './core/world.js';
-import { invalidate } from './core/sim.js';
-import { clearSave, loadGame, loadSettings, saveSettings, writeSave } from './save/save.js';
-import { LANGUAGES } from './i18n.js';
+import { GAME } from './config.js?v=0.3.1';
+import * as actions from './core/actions.js?v=0.3.1';
+import * as worldActions from './core/world.js?v=0.3.1';
+import { activeIsland, createWorld, simulateWorld, tickWorld, worldFromState } from './core/world.js?v=0.3.1';
+import { invalidate } from './core/sim.js?v=0.3.1';
+import { clearSave, loadGame, loadSettings, saveSettings, writeSave } from './save/save.js?v=0.3.1';
+import { LANGUAGES } from './i18n.js?v=0.3.1';
 
 const WORLD_ACTIONS = {
   setActive: worldActions.setActive,

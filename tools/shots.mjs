@@ -88,8 +88,8 @@ export const SCENARIOS = {
     async run(page) {
       await wait(page, 600);
       await game(page, async () => {
-        const { createState } = await import('/js/core/state.js');
-        const { N } = await import('/js/core/map.js');
+        const { createState } = await import('/js/core/state.js?v=0.3.1');
+        const { N } = await import('/js/core/map.js?v=0.3.1');
         const s = createState({ seed: 4242 });
         const off = Math.floor((N - 14) / 2);
         let tiles = '';
@@ -216,7 +216,7 @@ export const SCENARIOS = {
       await wait(page, 900);
       await game(page, async () => {
         const g = window.__game;
-        const { suggestSpot } = await import('/js/core/actions.js');
+        const { suggestSpot } = await import('/js/core/actions.js?v=0.3.1');
         const spot = suggestSpot(g.state, 'field');
         g.dispatch('build', 'field', spot.x, spot.y);
         window.__ui.openQuests();
@@ -239,7 +239,7 @@ export const SCENARIOS = {
     async run(page) {
       await wait(page, 900);
       await game(page, async () => {
-        const m = await import('/js/dev/demo.js');
+        const m = await import('/js/dev/demo.js?v=0.3.1');
         window.__ui.showWelcome(m.DEMO_REPORT);
       });
       await wait(page, 900);
@@ -260,7 +260,7 @@ export const SCENARIOS = {
     async run(page) {
       await wait(page, 600);
       await game(page, () => { window.__game.setSetting('lang', 'en'); });
-      await game(page, async () => { (await import('/js/i18n.js')).setLang('en'); });
+      await game(page, async () => { (await import('/js/i18n.js?v=0.3.1')).setLang('en'); });
       await wait(page, 600);
       await game(page, () => {
         const b = window.__game.state.buildings.find((x) => x.type === 'market');
@@ -365,7 +365,7 @@ export const SCENARIOS = {
       await page.click('.card[data-type="field"]');
       await wait(page, 900); // the camera may zoom in to a finger-friendly size first
       const spot = await game(page, async () => {
-        const { canPlace } = await import('/js/core/actions.js');
+        const { canPlace } = await import('/js/core/actions.js?v=0.3.1');
         const s = window.__game.state; const n = Math.sqrt(s.tiles.length); const g = window.__ui.state.ghost;
         for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
           if ((x !== g.x || y !== g.y) && canPlace(s, 'field', x, y).ok) {

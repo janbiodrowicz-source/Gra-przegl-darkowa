@@ -7,14 +7,14 @@
  *   active – checks in every 3 s (an engaged first session), chops a few trees early
  *   casual – checks in every 45 s (glances at the game), chops at most 2 trees
  */
-import { BALANCE, BUILDINGS, BUILDING_ORDER, CAPPED, QUESTS, WORLD } from '../site/js/config.js';
-import { colonize, colonizeCost, createWorld, growthNeeded, hasPort, scoutBlocker, startScout, tickWorld } from '../site/js/core/world.js';
-import { createState } from '../site/js/core/state.js';
-import { buildCost, canAfford, countType, isUnlocked, upgradeCost, charmOf, housingOf } from '../site/js/core/economy.js';
-import { build, claimQuest, clearTile, placementPreview, suggestSpot, upgrade } from '../site/js/core/actions.js';
-import { currentQuest, questProgress } from '../site/js/core/quests.js';
-import { getRates, tick, timeToAfford } from '../site/js/core/sim.js';
-import { N, idx } from '../site/js/core/map.js';
+import { BALANCE, BUILDINGS, BUILDING_ORDER, CAPPED, QUESTS, WORLD } from '../site/js/config.js?v=0.3.1';
+import { colonize, colonizeCost, createWorld, growthNeeded, hasPort, scoutBlocker, startScout, tickWorld } from '../site/js/core/world.js?v=0.3.1';
+import { createState } from '../site/js/core/state.js?v=0.3.1';
+import { buildCost, canAfford, countType, isUnlocked, upgradeCost, charmOf, housingOf } from '../site/js/core/economy.js?v=0.3.1';
+import { build, claimQuest, clearTile, placementPreview, suggestSpot, upgrade } from '../site/js/core/actions.js?v=0.3.1';
+import { currentQuest, questProgress } from '../site/js/core/quests.js?v=0.3.1';
+import { getRates, tick, timeToAfford } from '../site/js/core/sim.js?v=0.3.1';
+import { N, idx } from '../site/js/core/map.js?v=0.3.1';
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => {
   const [k, v = 'true'] = a.replace(/^--/, '').split('=');

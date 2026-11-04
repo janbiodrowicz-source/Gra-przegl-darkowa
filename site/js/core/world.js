@@ -12,12 +12,12 @@
  * Every island keeps working while it is not on screen (same tick(), same
  * offline simulation). Pure logic like the rest of core: no DOM, no clock.
  */
-import { BIOME_ORDER, BUILDINGS, RESOURCES, WORLD } from '../config.js';
-import { createState } from './state.js';
-import { canAfford, capsOf, countType, pay, scaleCost } from './economy.js';
-import { simulate, tick } from './sim.js';
-import { updateQuests } from './quests.js';
-import { hash2 } from './rng.js';
+import { BIOME_ORDER, BUILDINGS, RESOURCES, WORLD } from '../config.js?v=0.3.1';
+import { createState } from './state.js?v=0.3.1';
+import { canAfford, capsOf, countType, pay, scaleCost } from './economy.js?v=0.3.1';
+import { simulate, tick } from './sim.js?v=0.3.1';
+import { updateQuests } from './quests.js?v=0.3.1';
+import { hash2 } from './rng.js?v=0.3.1';
 
 const fail = (reason, extra = {}) => ({ ok: false, reason, ...extra });
 

@@ -2,12 +2,12 @@
  * Top HUD: resource chips (value, rate, storage bar), population,
  * the current quest pill and the settings button.
  */
-import { BALANCE, CAPPED, RESOURCES } from '../config.js';
-import { t } from '../i18n.js';
-import { currentQuest, questProgress } from '../core/quests.js';
-import { h, setClass, setText, setVar } from './dom.js';
-import { icon } from './icons.js';
-import { fmt, fmtRate } from './format.js';
+import { BALANCE, CAPPED, RESOURCES } from '../config.js?v=0.3.1';
+import { t } from '../i18n.js?v=0.3.1';
+import { currentQuest, questProgress } from '../core/quests.js?v=0.3.1';
+import { h, setClass, setText, setVar } from './dom.js?v=0.3.1';
+import { icon } from './icons.js?v=0.3.1';
+import { fmt, fmtRate } from './format.js?v=0.3.1';
 
 export function createHud({ onChip, onQuests, onClaim, onSettings, onIslands }) {
   const chips = {};
