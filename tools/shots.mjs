@@ -76,6 +76,23 @@ export const SCENARIOS = {
       await wait(page, 700);
     },
   },
+  noincome: {
+    // no stone income: the card pill names the missing resource, a tap explains where to get it
+    path: '?test',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, () => {
+        const g = window.__game;
+        g.state.res.stone = 0;
+        g.state.rev++;
+      });
+      await wait(page, 400);
+      await page.click('.card[data-type="sawmill"]');
+      await wait(page, 600);
+      return game(page, () => document.querySelector('.toast__text')?.textContent);
+    },
+  },
   quests: {
     path: '?test',
     fresh: true,

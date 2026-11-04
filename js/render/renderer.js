@@ -13,6 +13,10 @@ import { HH, HW, LIP, groundCode, groundZ, tileCenter, toGrid } from './iso.js';
 import { bakeTerrain, coastSegments, groundKey, islandBounds } from './terrain.js';
 import { buildingHeight, drawBuilding, drawBuildingDynamic, drawRock, drawTree, hutChimney, tierOf } from './art.js';
 import { createFx } from './fx.js';
+
+/** Portrait phones: extra zoom over a whole-island fit, and where the island centre sits (0 = top, 1 = bottom of the free area). */
+const PORTRAIT_ZOOM = 1.38;
+const PORTRAIT_LIFT = 0.45;
 import { createLife } from './life.js';
 import { iconDataUrl } from '../ui/icons.js';
 
@@ -134,8 +138,13 @@ export function createRenderer({ canvas, game, ui, bus }) {
     const sw = Math.max(80, s.right - s.left);
     const sh = Math.max(80, s.bottom - s.top);
     const core = islandBounds(state?.tiles ?? game.state.tiles, 8);
-    cam.fit = Math.min(sw / core.w, sh / core.h) * 0.97;
-    cam.min = cam.fit * 0.85;
+    const whole = Math.min(sw / core.w, sh / core.h) * 0.97;
+    // Tall phone screens: the iso diamond is twice as wide as it is tall, so a
+    // width-fit leaves a lot of empty sea above and below. Zoom in and let the
+    // (mostly beach) left/right tips run off-screen — the player can pan there.
+    const tall = sh > sw * 1.15;
+    cam.fit = tall ? Math.min(whole * PORTRAIT_ZOOM, (sh / core.h) * 0.92) : whole;
+    cam.min = Math.min(cam.fit, whole) * 0.85;
     cam.max = Math.max(cam.fit * 3.2, 1.6);
     cam.zoom = Math.min(cam.max, Math.max(cam.min, cam.zoom));
   }
@@ -147,7 +156,10 @@ export function createRenderer({ canvas, game, ui, bus }) {
     const cx = core.x + core.w / 2;
     const cy = core.y + core.h / 2;
     cam.x = cx - ((s.left + s.right) / 2 - view.w / 2) / cam.zoom;
-    cam.y = cy - ((s.top + s.bottom) / 2 - view.h / 2) / cam.zoom;
+    // on tall screens sit the island a little above the middle (the build bar is heavy)
+    const tall = s.bottom - s.top > (s.right - s.left) * 1.15;
+    const ty = tall ? s.top + (s.bottom - s.top) * PORTRAIT_LIFT : (s.top + s.bottom) / 2;
+    cam.y = cy - (ty - view.h / 2) / cam.zoom;
     fitted = true;
     clampCam();
   }

@@ -77,7 +77,13 @@ export function createBuildBar({ onCard, onConfirm, onCancel, artFor }) {
       setText(c.count, n ? `×${n}` : '');
       if (unlocked && !afford) {
         const eta = timeToAfford(state, cost, rates);
-        setText(c.eta, eta.blocker === 'cap' ? t('ui.capShort') : eta.blocker ? '—' : fmtClock(eta.seconds));
+        // no income of a missing resource: show WHICH one is missing ("🪨 brak")
+        const key = eta.blocker === 'income' ? `inc:${eta.res}` : eta.blocker === 'cap' ? 'cap' : fmtClock(eta.seconds);
+        if (c.eta.__key !== key) {
+          c.eta.__key = key;
+          if (eta.blocker === 'income') c.eta.replaceChildren(h('span', { html: icon(eta.res) }), t('ui.noneShort'));
+          else c.eta.textContent = eta.blocker === 'cap' ? t('ui.capShort') : key;
+        }
         setClass(c.eta, 'is-blocked', !!eta.blocker);
       }
     }
@@ -135,11 +141,28 @@ export function createBuildBar({ onCard, onConfirm, onCancel, artFor }) {
       const eta = timeToAfford(state, cost, rates);
       const missing = {};
       for (const [k, v] of Object.entries(cost)) if ((state.res[k] ?? 0) < v) missing[k] = Math.ceil(v - state.res[k]);
-      const tail = eta.blocker === 'cap' ? t('ui.capTooSmall') : eta.blocker ? t('ui.noIncome') : t('ui.affordIn', { t: fmtClock(eta.seconds) });
+      if (eta.blocker === 'income') {
+        return { reason: 'income', res: eta.res, text: [`${t('ui.missing')} `, ...amounts(missing), ` — ${sourceHint(state, eta.res)}`] };
+      }
+      const tail = eta.blocker === 'cap' ? t('ui.capTooSmall') : t('ui.affordIn', { t: fmtClock(eta.seconds) });
       return { reason: 'cost', text: [`${t('ui.missing')} `, ...amounts(missing), ` · ${tail}`] };
     }
     return null;
   }
 
   return { el, update, whyNot, cards };
+}
+
+/** Where a resource comes from — the first unlocked producer, or the next quest that unlocks one. */
+export function sourceHint(state, res) {
+  const makers = BUILDING_ORDER.filter((type) => BUILDINGS[type].produce && res in BUILDINGS[type].produce);
+  const open = makers.filter((type) => isUnlocked(state, type));
+  const extra = res === 'stone' && state.tiles.includes('r') ? t('src.rock') : res === 'wood' && state.tiles.includes('t') ? t('src.tree') : '';
+  if (open.length) {
+    const names = open.slice(0, 2).map((type) => t(`b.${type}.name`)).join(t('src.or'));
+    return t('src.build', { names }) + (extra ? t('src.or') + extra : '');
+  }
+  if (extra) return extra;
+  const q = makers.length ? getQuest(BUILDINGS[makers[0]].unlock) : null;
+  return q ? t('src.quest', { quest: t(`q.${q.id}.title`), name: t(`b.${makers[0]}.name`) }) : t('src.wait');
 }

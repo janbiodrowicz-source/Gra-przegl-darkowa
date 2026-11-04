@@ -470,7 +470,9 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
   font-weight: 900;
   font-variant-numeric: tabular-nums;
 }
-.card__eta.is-blocked { background: var(--c-bad); }
+.card__eta.is-blocked { background: var(--c-bad); display: none; align-items: center; gap: 3px; padding: 2px 7px 2px 3px; }
+.card.is-poor .card__eta.is-blocked { display: inline-flex; }
+.card__eta .ico { width: 15px; height: 15px; padding: 1px; border-radius: 50%; background: #fff; }
 .card.is-poor .card__art { opacity: 0.5; filter: saturate(0.5); }
 .card.is-poor .card__eta { display: block; }
 .card__lock { position: absolute; top: 22px; left: 50%; width: 28px; height: 28px; margin-left: -14px; color: var(--c-ink-2); display: none; }

@@ -126,7 +126,7 @@ export function createUI({ game, bus, sfx, audio, platform }) {
       }
       const card = parts.bar.cards[type]?.el;
       if (card) retrigger(card, 'is-shake');
-      toast(why.text, { kind: why.reason === 'locked' ? 'info' : 'warn', icon: why.reason === 'locked' ? 'lock' : 'clock' });
+      toast(why.text, { kind: why.reason === 'locked' ? 'info' : 'warn', icon: why.reason === 'locked' ? 'lock' : why.reason === 'income' ? why.res : 'clock', ms: why.reason === 'income' ? 5200 : undefined });
       return;
     }
     startPlacement(type);
