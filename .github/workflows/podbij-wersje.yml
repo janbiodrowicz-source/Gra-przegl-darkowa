@@ -6,7 +6,7 @@
 name: Podbij wersję
 on:
   push:
-    branches: ['**']
+    branches-ignore: [wyniki-testow]
     paths: ['site/**']
   workflow_dispatch:
     inputs:

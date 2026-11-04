@@ -1,15 +1,19 @@
 # Test dymny gry w przeglądarce headless na GitHubie. Odpala się po każdym wypchnięciu na dowolną gałąź
 # oraz ręcznie (Actions → Test gry → Run workflow).
 # Wynik: zielony/czerwony znaczek, podsumowanie z listą testów (OK/FAIL) i zrzuty ekranu (artefakt „zrzuty”).
+# Dodatkowo wynik trafia do pliku OSTATNI-WYNIK.md na gałęzi wyniki-testow, żeby zwykły czat (bez narzędzi
+# do Actions) mógł go przeczytać jak każdy plik z repo.
 name: Test gry
 on:
   push:
-    branches: ['**']
+    branches-ignore: [wyniki-testow]
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write   # zapis wyniku do gałęzi wyniki-testow
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,7 +25,10 @@ jobs:
           npx --prefix "$RUNNER_TEMP/pw" playwright install --with-deps chromium
           echo "NODE_PATH=$RUNNER_TEMP/pw/node_modules" >> "$GITHUB_ENV"
       - name: Testy logiki (Node)
-        run: node tools/test-core.mjs
+        run: |
+          set +e
+          node tools/test-core.mjs 2>&1 | tee logika.txt
+          exit ${PIPESTATUS[0]}
       - name: Test dymny
         run: |
           set +e
@@ -35,3 +42,40 @@ jobs:
           name: zrzuty
           path: ${{ runner.temp }}/testy/*.png
           if-no-files-found: warn
+      - name: Zapisz wynik w repo (gałąź wyniki-testow, plik OSTATNI-WYNIK.md)
+        if: always()
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS: ${{ job.status }}
+        run: |
+          adres="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # starszy test (commit nie jest już końcem gałęzi, np. przed automatycznym podbiciem wersji) nie nadpisuje wyniku
+          koniec="$(git ls-remote "$adres" "refs/heads/${GITHUB_REF_NAME}" | cut -f1)"
+          if [ -n "$koniec" ] && [ "$koniec" != "$GITHUB_SHA" ]; then
+            echo "Commit $GITHUB_SHA nie jest już końcem gałęzi (jest $koniec) — pomijam zapis wyniku."
+            exit 0
+          fi
+          mkdir -p "$RUNNER_TEMP/wynik" && cd "$RUNNER_TEMP/wynik"
+          git init -q && git checkout -q -b wyniki-testow
+          {
+            echo "# Ostatni test gry"
+            echo
+            echo "- wynik: ${STATUS}"
+            echo "- gałąź: ${GITHUB_REF_NAME}"
+            echo "- commit: ${GITHUB_SHA}"
+            echo "- czas: $(date -u '+%Y-%m-%d %H:%M:%S') UTC"
+            echo "- przebieg: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+            echo "## Testy logiki"
+            echo '```'
+            tail -n 12 "$GITHUB_WORKSPACE/logika.txt" 2>/dev/null || echo "(brak logu)"
+            echo '```'
+            echo
+            echo "## Test dymny"
+            echo '```'
+            cat "$GITHUB_WORKSPACE/wynik.txt" 2>/dev/null || echo "(brak logu testu)"
+            echo '```'
+          } > OSTATNI-WYNIK.md
+          git add OSTATNI-WYNIK.md
+          git -c user.name=github-actions -c user.email=actions@github.com commit -qm "wynik testu: ${STATUS} (${GITHUB_REF_NAME} ${GITHUB_SHA})"
+          git push -f "$adres" wyniki-testow
