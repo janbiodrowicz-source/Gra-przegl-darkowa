@@ -3,13 +3,13 @@
  * the "scouts are back" window with the islands found, and the scouting block
  * shown in the harbour's details panel.
  */
-import { BIOMES, WORLD } from '../config.js?v=0.3.1';
-import { t } from '../i18n.js?v=0.3.1';
-import { canAfford, capsOf } from '../core/economy.js?v=0.3.1';
-import { colonizeCost, freeBiomes, growthNeeded, islandSummaries, scoutBlocker, scoutTime } from '../core/world.js?v=0.3.1';
-import { h, setClass, setText, setVar } from './dom.js?v=0.3.1';
-import { icon } from './icons.js?v=0.3.1';
-import { fmt, fmtClock, fmtPct } from './format.js?v=0.3.1';
+import { BIOMES, WORLD } from '../config.js?v=0.3.2';
+import { t } from '../i18n.js?v=0.3.2';
+import { canAfford, capsOf } from '../core/economy.js?v=0.3.2';
+import { colonizeCost, freeBiomes, growthNeeded, islandSummaries, scoutBlocker, scoutTime } from '../core/world.js?v=0.3.2';
+import { h, setClass, setText, setVar } from './dom.js?v=0.3.2';
+import { icon } from './icons.js?v=0.3.2';
+import { fmt, fmtClock, fmtPct } from './format.js?v=0.3.2';
 
 export const biomeIcon = (biome) => icon(`isl_${biome}`);
 export const islandName = (world, index) => t(`biome.${world.islands[index]?.biome ?? 'home'}.name`);

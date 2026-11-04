@@ -2,5 +2,7 @@
   Cache-Control: no-cache, no-store, must-revalidate
 /js/*
   Cache-Control: public, max-age=300
+  Content-Type: text/javascript; charset=utf-8
 /styles.css
   Cache-Control: public, max-age=300
+  Content-Type: text/css; charset=utf-8

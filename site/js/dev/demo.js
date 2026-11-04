@@ -2,13 +2,13 @@
  * Demo settlement for screenshots and manual testing (?demo).
  * Built with the real actions, so it is always a valid state.
  */
-import { QUESTS } from '../config.js?v=0.3.1';
-import { createState } from '../core/state.js?v=0.3.1';
-import { build, clearTile, suggestSpot, upgrade } from '../core/actions.js?v=0.3.1';
-import { capsOf, popCapOf } from '../core/economy.js?v=0.3.1';
-import { getRates } from '../core/sim.js?v=0.3.1';
-import { N } from '../core/map.js?v=0.3.1';
-import { linkWorld, worldFromState } from '../core/world.js?v=0.3.1';
+import { QUESTS } from '../config.js?v=0.3.2';
+import { createState } from '../core/state.js?v=0.3.2';
+import { build, clearTile, suggestSpot, upgrade } from '../core/actions.js?v=0.3.2';
+import { capsOf, popCapOf } from '../core/economy.js?v=0.3.2';
+import { getRates } from '../core/sim.js?v=0.3.2';
+import { N } from '../core/map.js?v=0.3.2';
+import { linkWorld, worldFromState } from '../core/world.js?v=0.3.2';
 
 /** stage 1: ~15 min town (quest 5); stage 2: ~40 min town with the second wave. */
 export function buildDemoState(seed = 20261103, stage = 1) {

@@ -1,14 +1,14 @@
 /**
  * Boot: platform → settings & save → i18n → audio → UI → loop.
  */
-import { platform } from './platform.js?v=0.3.1';
-import { bus } from './core/events.js?v=0.3.1';
-import { Game } from './game.js?v=0.3.1';
-import { setLang, t } from './i18n.js?v=0.3.1';
-import * as audio from './audio/sfx.js?v=0.3.1';
-import { createUI } from './ui/ui.js?v=0.3.1';
-import { createRenderer } from './render/renderer.js?v=0.3.1';
-import { createInput } from './input.js?v=0.3.1';
+import { platform } from './platform.js?v=0.3.2';
+import { bus } from './core/events.js?v=0.3.2';
+import { Game } from './game.js?v=0.3.2';
+import { setLang, t } from './i18n.js?v=0.3.2';
+import * as audio from './audio/sfx.js?v=0.3.2';
+import { createUI } from './ui/ui.js?v=0.3.2';
+import { createRenderer } from './render/renderer.js?v=0.3.2';
+import { createInput } from './input.js?v=0.3.2';
 
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
@@ -42,7 +42,7 @@ async function boot() {
 
   if (DEMO) {
     // Demo island for screenshots: never written to storage.
-    const { buildDemoState, buildDemoWorld } = await import('./dev/demo.js?v=0.3.1');
+    const { buildDemoState, buildDemoWorld } = await import('./dev/demo.js?v=0.3.2');
     const stage = params.get('demo');
     if (stage === '3') game.world = buildDemoWorld();
     else game.state = buildDemoState(undefined, stage === '2' ? 2 : 1);
@@ -80,10 +80,11 @@ async function boot() {
   });
 
   if (DEBUG) {
-    const { mountDebug } = await import('./dev/debug.js?v=0.3.1');
-    mountDebug(game, { collapsed: true });
+    const { mountDebug } = await import('./dev/debug.js?v=0.3.2');
+    mountDebug(game, { collapsed: true, renderer });
   }
   if (DEBUG || TEST) {
+    window.__gra = { game, ui, renderer };   // testy w tools/testy/ czytają stąd
     window.__game = game;
     window.__ui = ui;
     window.__renderer = renderer;

@@ -2,12 +2,12 @@
  * Modal layer (one dialog at a time, queued) + the game's dialogs:
  * welcome back, settings, quests and the "open in another tab" lock.
  */
-import { CAPPED, GAME, QUESTS, RESOURCES } from '../config.js?v=0.3.1';
-import { getLang, LANGUAGES, t } from '../i18n.js?v=0.3.1';
-import { questList, unlocksOf } from '../core/quests.js?v=0.3.1';
-import { h, setText, setClass, setVar } from './dom.js?v=0.3.1';
-import { icon } from './icons.js?v=0.3.1';
-import { fmt, fmtDuration } from './format.js?v=0.3.1';
+import { CAPPED, GAME, QUESTS, RESOURCES } from '../config.js?v=0.3.2';
+import { getLang, LANGUAGES, t } from '../i18n.js?v=0.3.2';
+import { questList, unlocksOf } from '../core/quests.js?v=0.3.2';
+import { h, setText, setClass, setVar } from './dom.js?v=0.3.2';
+import { icon } from './icons.js?v=0.3.2';
+import { fmt, fmtDuration } from './format.js?v=0.3.2';
 
 let keyboardMode = false;
 if (typeof window !== 'undefined') {

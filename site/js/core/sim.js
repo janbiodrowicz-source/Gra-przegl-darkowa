@@ -3,13 +3,13 @@
  * offline progress and helper queries for the UI. Pure logic — time is
  * always passed in, never read from a clock.
  */
-import { BALANCE, BUILDINGS, CAPPED, GAME, RESOURCES } from '../config.js?v=0.3.1';
+import { BALANCE, BUILDINGS, CAPPED, GAME, RESOURCES } from '../config.js?v=0.3.2';
 import {
   adjacencyBonus, auraOf, baseRateOf, withBiome, capsOf, charmMultiplier, charmOf, emptyRes, housingOf, occupancy, popCapOf,
   producesFood, refundOf, slotsOf, storageOf, totalCharm, upgradeCost,
-} from './economy.js?v=0.3.1';
-import { prestigeMultiplier } from './prestige.js?v=0.3.1';
-import { updateQuests } from './quests.js?v=0.3.1';
+} from './economy.js?v=0.3.2';
+import { prestigeMultiplier } from './prestige.js?v=0.3.2';
+import { updateQuests } from './quests.js?v=0.3.2';
 
 const cache = new WeakMap();
 

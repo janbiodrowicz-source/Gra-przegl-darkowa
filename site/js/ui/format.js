@@ -4,7 +4,7 @@
  *   fmtRate(0.8) → "+0.8/s"
  *   fmtClock(42) → "0:42",  fmtDuration(8040) → "2 h 14 min"
  */
-import { t } from '../i18n.js?v=0.3.1';
+import { t } from '../i18n.js?v=0.3.2';
 
 const SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx'];
 const MINUS = '−';

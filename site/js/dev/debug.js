@@ -3,11 +3,12 @@
  * offers cheats for testing: resources, random actions, time skips.
  * Not translated on purpose — it is a tool, not part of the game.
  */
-import { BUILDING_ORDER, QUESTS, RESOURCES } from '../config.js?v=0.3.1';
-import { buildCost, canAfford, isUnlocked, upgradeCost } from '../core/economy.js?v=0.3.1';
-import { N, idx, isBuildable, isClearable } from '../core/map.js?v=0.3.1';
-import { getRates } from '../core/sim.js?v=0.3.1';
-import { canPlace } from '../core/actions.js?v=0.3.1';
+import { BUILDING_ORDER, QUESTS, RESOURCES } from '../config.js?v=0.3.2';
+import { buildCost, canAfford, isUnlocked, upgradeCost } from '../core/economy.js?v=0.3.2';
+import { N, idx, isBuildable, isClearable } from '../core/map.js?v=0.3.2';
+import { getRates } from '../core/sim.js?v=0.3.2';
+import { canPlace } from '../core/actions.js?v=0.3.2';
+import { WERSJA } from '../wersja.js?v=0.3.2';
 
 const CSS = `
 #dbg{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top,0px));z-index:9999;max-width:min(360px,calc(100vw - 16px));
@@ -15,6 +16,7 @@ const CSS = `
   border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.35);pointer-events:auto;user-select:text}
 #dbg header{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;font-weight:700;color:#7ff0d8}
 #dbg header span{margin-left:auto;font-weight:400;color:#9fb9b4}
+#dbg header button{margin-left:4px;padding:3px 8px;min-height:26px}
 #dbg pre{margin:0;padding:0 10px 8px;white-space:pre-wrap;max-height:42vh;overflow:auto}
 #dbg .btns{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 10px}
 #dbg button{font:inherit;color:#0d2a2a;background:#7ff0d8;border:0;border-radius:8px;padding:6px 8px;min-height:32px;cursor:pointer}
@@ -24,7 +26,7 @@ const CSS = `
 
 const f1 = (v) => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1));
 
-export function mountDebug(game, { collapsed = false } = {}) {
+export function mountDebug(game, { collapsed = false, renderer = null } = {}) {
   const style = document.createElement('style');
   style.textContent = CSS;
   document.head.appendChild(style);
@@ -32,12 +34,59 @@ export function mountDebug(game, { collapsed = false } = {}) {
   const root = document.createElement('div');
   root.id = 'dbg';
   if (collapsed) root.classList.add('collapsed');
-  root.innerHTML = '<header>🛠 debug <span></span></header><pre></pre><div class="btns"></div>';
+  root.innerHTML = '<header>🛠 debug <span></span><button type="button" data-kopiuj>Kopiuj</button></header><pre></pre><div class="btns"></div>';
   document.body.appendChild(root);
   const head = root.querySelector('header span');
   const pre = root.querySelector('pre');
   const btns = root.querySelector('.btns');
-  root.querySelector('header').addEventListener('click', () => root.classList.toggle('collapsed'));
+  const kopiujBtn = root.querySelector('[data-kopiuj]');
+  root.querySelector('header').addEventListener('click', (e) => {
+    if (e.target === kopiujBtn) return;
+    root.classList.toggle('collapsed');
+  });
+
+  // Errors collected since the very start of the page (see the inline script in index.html).
+  if (!window.__bledy) {
+    window.__bledy = [];
+    addEventListener('error', (e) => window.__bledy.push(`${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})`));
+    addEventListener('unhandledrejection', (e) => window.__bledy.push(`obietnica: ${(e.reason && e.reason.message) || e.reason}`));
+  }
+
+  /** Report for pasting into a chat: version, numbers, errors, address, browser. */
+  function raport(pelny) {
+    const s = game.state;
+    const r = getRates(s);
+    const w = game.world;
+    const rs = renderer ? renderer.stats() : null;
+    const bledy = window.__bledy || [];
+    const linie = [
+      `Wysepka ${WERSJA} | FPS ${Math.round(game.fps)} | wyspy ${w.islands.length} (na ekranie: ${s.biome})`,
+      rs ? `rysowanie: sprite'y ${rs.sprites} | cząsteczki ${rs.particles} | skala ${rs.scale} | zoom ${rs.zoom.toFixed(2)}` : 'rysowanie: -',
+      `t=${s.time.toFixed(0)}s | ludność ${s.pop.toFixed(1)}/${r.popCap} | budynki ${s.buildings.length} | wczytanie: ${game.loadStatus}`,
+      `błędy: ${bledy.length}`,
+    ];
+    const ile = pelny ? bledy.length : 5;
+    for (const b of bledy.slice(-ile)) linie.push('! ' + (pelny ? b : b.slice(0, 160)));
+    if (pelny) linie.push(`adres: ${location.href}`, `przeglądarka: ${navigator.userAgent}`);
+    return linie.join('\n');
+  }
+
+  async function kopiuj() {
+    const t = raport(true);
+    try {
+      await navigator.clipboard.writeText(t);
+    } catch {
+      const a = document.createElement('textarea');
+      a.value = t;
+      document.body.appendChild(a);
+      a.select();
+      try { document.execCommand('copy'); } catch { /* brak schowka */ }
+      a.remove();
+    }
+    kopiujBtn.textContent = 'Skopiowano ✔';
+    setTimeout(() => { kopiujBtn.textContent = 'Kopiuj'; }, 1500);
+  }
+  kopiujBtn.addEventListener('click', kopiuj);
 
   const rnd = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const log = [];
@@ -90,6 +139,8 @@ export function mountDebug(game, { collapsed = false } = {}) {
     'skip 1h': () => { const r = game.skip(3600); note(r ? `skipped ${Math.round(r.seconds)}s` : 'skip failed'); },
     'skip 9h': () => { const r = game.skip(9 * 3600); note(r ? `skipped ${Math.round(r.seconds)}s (capped: ${r.capped})` : 'skip failed'); },
     'time x10': () => { game.timeScale = game.timeScale === 1 ? 10 : 1; note(`time ×${game.timeScale}`); },
+    'clear errors': () => { window.__bledy.length = 0; note('errors cleared'); },
+    fold: () => root.classList.add('collapsed'),
     save: () => note(game.save() ? 'saved' : 'save failed'),
     reset: () => { game.reset(); note('reset'); },
   };
@@ -108,8 +159,10 @@ export function mountDebug(game, { collapsed = false } = {}) {
     acc = 0;
     const s = game.state;
     const r = getRates(s);
-    head.textContent = `${Math.round(game.fps)} fps · ×${game.timeScale}`;
+    head.textContent = `v${WERSJA} · ${Math.round(game.fps)} fps${game.timeScale !== 1 ? ` · ×${game.timeScale}` : ''}`;
     const lines = [];
+    const bledy = window.__bledy || [];
+    if (bledy.length) lines.push(`ERRORS ${bledy.length}:`, ...bledy.slice(-5).map((b) => `! ${b.slice(0, 160)}`));
     lines.push(`t=${s.time.toFixed(0)}s  seed=${s.seed}  load=${game.loadStatus}${game.readOnly ? ' (read-only)' : ''}`);
     for (const k of RESOURCES) {
       const cap = Number.isFinite(r.caps[k]) ? `/${r.caps[k]}` : '';
