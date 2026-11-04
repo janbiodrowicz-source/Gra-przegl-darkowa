@@ -1,8 +1,8 @@
 /**
  * Quest chain logic. Status per quest: 'locked' → 'active' → 'done' → 'claimed'.
  */
-import { BUILDINGS, BUILDING_ORDER, QUESTS } from '../config.js?v=0.3.3';
-import { capsOf, countType, grant, totalCharm } from './economy.js?v=0.3.3';
+import { BUILDINGS, BUILDING_ORDER, QUESTS } from '../config.js?v=0.3.4';
+import { capsOf, countType, grant, totalCharm } from './economy.js?v=0.3.4';
 
 export function getQuest(id) {
   return QUESTS.find((q) => q.id === id) || null;

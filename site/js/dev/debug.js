@@ -3,12 +3,12 @@
  * offers cheats for testing: resources, random actions, time skips.
  * Not translated on purpose — it is a tool, not part of the game.
  */
-import { BUILDING_ORDER, QUESTS, RESOURCES } from '../config.js?v=0.3.3';
-import { buildCost, canAfford, isUnlocked, upgradeCost } from '../core/economy.js?v=0.3.3';
-import { N, idx, isBuildable, isClearable } from '../core/map.js?v=0.3.3';
-import { getRates } from '../core/sim.js?v=0.3.3';
-import { canPlace } from '../core/actions.js?v=0.3.3';
-import { WERSJA } from '../wersja.js?v=0.3.3';
+import { BUILDING_ORDER, QUESTS, RESOURCES } from '../config.js?v=0.3.4';
+import { buildCost, canAfford, isUnlocked, upgradeCost } from '../core/economy.js?v=0.3.4';
+import { N, idx, isBuildable, isClearable } from '../core/map.js?v=0.3.4';
+import { getRates } from '../core/sim.js?v=0.3.4';
+import { canPlace } from '../core/actions.js?v=0.3.4';
+import { WERSJA } from '../wersja.js?v=0.3.4';
 
 const CSS = `
 #dbg{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top,0px));z-index:9999;max-width:min(360px,calc(100vw - 16px));

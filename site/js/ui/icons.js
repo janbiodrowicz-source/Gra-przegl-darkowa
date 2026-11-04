@@ -4,7 +4,7 @@
  *  - UI glyphs: rounded 2px strokes in currentColor
  * All strings are static and trusted (safe for innerHTML).
  */
-import { fmt, fmtRate } from './format.js?v=0.3.3';
+import { fmt, fmtRate } from './format.js?v=0.3.4';
 
 const RES = {
   wood: `

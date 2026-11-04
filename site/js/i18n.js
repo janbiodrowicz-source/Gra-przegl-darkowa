@@ -5,8 +5,8 @@
  * Plural entries are objects: { one: '{n} chata', few: '{n} chaty', many: '{n} chat', other: '…' }
  * and are selected with params.n.
  */
-import pl from './lang/pl.js?v=0.3.3';
-import en from './lang/en.js?v=0.3.3';
+import pl from './lang/pl.js?v=0.3.4';
+import en from './lang/en.js?v=0.3.4';
 
 export const DICTS = Object.freeze({ pl, en });
 export const LANGUAGES = Object.freeze(Object.keys(DICTS));

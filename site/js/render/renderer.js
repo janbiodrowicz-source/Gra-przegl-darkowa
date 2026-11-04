@@ -3,22 +3,22 @@
  * selection, particles. Owns the camera; input.js drives it.
  * Reads game.state and ui.state every frame — never mutates the game.
  */
-import { BUILDINGS } from '../config.js?v=0.3.3';
-import { N, idx, inBounds } from '../core/map.js?v=0.3.3';
-import { hash2 } from '../core/rng.js?v=0.3.3';
-import { canPlace } from '../core/actions.js?v=0.3.3';
-import { auraOf, auraTargetsAt, buildingAt } from '../core/economy.js?v=0.3.3';
-import { getRates } from '../core/sim.js?v=0.3.3';
-import { HH, HW, LIP, groundCode, groundZ, tileCenter, toGrid } from './iso.js?v=0.3.3';
-import { bakeTerrain, coastSegments, groundKey, islandBounds } from './terrain.js?v=0.3.3';
-import { BAKERY_CHIMNEY, buildingHeight, drawBuilding, drawBuildingDynamic, drawRock, drawTree, hutChimney, tierOf } from './art.js?v=0.3.3';
-import { createFx } from './fx.js?v=0.3.3';
+import { BUILDINGS } from '../config.js?v=0.3.4';
+import { N, idx, inBounds } from '../core/map.js?v=0.3.4';
+import { hash2 } from '../core/rng.js?v=0.3.4';
+import { canPlace } from '../core/actions.js?v=0.3.4';
+import { auraOf, auraTargetsAt, buildingAt } from '../core/economy.js?v=0.3.4';
+import { getRates } from '../core/sim.js?v=0.3.4';
+import { HH, HW, LIP, groundCode, groundZ, tileCenter, toGrid } from './iso.js?v=0.3.4';
+import { bakeTerrain, coastSegments, groundKey, islandBounds } from './terrain.js?v=0.3.4';
+import { BAKERY_CHIMNEY, buildingHeight, drawBuilding, drawBuildingDynamic, drawRock, drawTree, hutChimney, tierOf } from './art.js?v=0.3.4';
+import { createFx } from './fx.js?v=0.3.4';
 
 /** Portrait phones: extra zoom over a whole-island fit, and where the island centre sits (0 = top, 1 = bottom of the free area). */
 const PORTRAIT_ZOOM = 1.38;
 const PORTRAIT_LIFT = 0.45;
-import { createLife } from './life.js?v=0.3.3';
-import { iconDataUrl } from '../ui/icons.js?v=0.3.3';
+import { createLife } from './life.js?v=0.3.4';
+import { iconDataUrl } from '../ui/icons.js?v=0.3.4';
 
 const TAU = Math.PI * 2;
 const TREE_VARIANTS = 6;

@@ -6,7 +6,7 @@
  * in js/render/art.js and two i18n keys (b.<id>.name / b.<id>.desc).
  */
 
-import { WERSJA } from './wersja.js?v=0.3.3';
+import { WERSJA } from './wersja.js?v=0.3.4';
 
 export const GAME = Object.freeze({
   id: 'wysepka',

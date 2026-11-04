@@ -6,8 +6,8 @@
  *   t – tree (clearable)     r – rock (clearable)
  * Everything outside the grid counts as sea.
  */
-import { BIOMES, MAP } from '../config.js?v=0.3.3';
-import { mulberry32, randInt, shuffle } from './rng.js?v=0.3.3';
+import { BIOMES, MAP } from '../config.js?v=0.3.4';
+import { mulberry32, randInt, shuffle } from './rng.js?v=0.3.4';
 
 export const TILE = Object.freeze({ WATER: 'w', SAND: 's', GRASS: 'g', TREE: 't', ROCK: 'r' });
 

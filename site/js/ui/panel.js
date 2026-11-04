@@ -2,16 +2,16 @@
  * Slide-in details panel (bottom sheet on phones, right sidebar on wide screens)
  * for a selected building or a tree/rock tile.
  */
-import { BALANCE, BUILDINGS, WORLD } from '../config.js?v=0.3.3';
-import { createPortBlock } from './islands.js?v=0.3.3';
-import { t } from '../i18n.js?v=0.3.3';
-import { canAfford, getBuilding } from '../core/economy.js?v=0.3.3';
-import { demolishPreview } from '../core/actions.js?v=0.3.3';
-import { buildingInfo } from '../core/sim.js?v=0.3.3';
-import { idx } from '../core/map.js?v=0.3.3';
-import { h, setClass, setText } from './dom.js?v=0.3.3';
-import { amounts, chip, icon } from './icons.js?v=0.3.3';
-import { fmt, fmtPct, fmtRate } from './format.js?v=0.3.3';
+import { BALANCE, BUILDINGS, WORLD } from '../config.js?v=0.3.4';
+import { createPortBlock } from './islands.js?v=0.3.4';
+import { t } from '../i18n.js?v=0.3.4';
+import { canAfford, getBuilding } from '../core/economy.js?v=0.3.4';
+import { demolishPreview } from '../core/actions.js?v=0.3.4';
+import { buildingInfo } from '../core/sim.js?v=0.3.4';
+import { idx } from '../core/map.js?v=0.3.4';
+import { h, setClass, setText } from './dom.js?v=0.3.4';
+import { amounts, chip, icon } from './icons.js?v=0.3.4';
+import { fmt, fmtPct, fmtRate } from './format.js?v=0.3.4';
 
 function costChips(cost) {
   return Object.entries(cost).map(([k, v]) => h(`span.cost.cost--${k}`, null, h('span', { html: icon(k) }), h('span.cost__num', null, fmt(v))));

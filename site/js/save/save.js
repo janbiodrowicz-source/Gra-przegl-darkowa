@@ -7,10 +7,10 @@
  *                         quests, meta, islands: [ { ...persistent island fields } ] } }
  * v1 stored a single island as `state` on a 14×14 grid.
  */
-import { BALANCE, BIOMES, BUILDINGS, GAME, MAP, QUESTS, RESOURCES, WORLD } from '../config.js?v=0.3.3';
-import { createState, defaultFlags, defaultMeta, defaultStats } from '../core/state.js?v=0.3.3';
-import { TILE, idx, inBounds, isClearable, clearedTileCode, padLegacyTiles, setTile } from '../core/map.js?v=0.3.3';
-import { activeIsland, createWorld, linkWorld, worldFromState } from '../core/world.js?v=0.3.3';
+import { BALANCE, BIOMES, BUILDINGS, GAME, MAP, QUESTS, RESOURCES, WORLD } from '../config.js?v=0.3.4';
+import { createState, defaultFlags, defaultMeta, defaultStats } from '../core/state.js?v=0.3.4';
+import { TILE, idx, inBounds, isClearable, clearedTileCode, padLegacyTiles, setTile } from '../core/map.js?v=0.3.4';
+import { activeIsland, createWorld, linkWorld, worldFromState } from '../core/world.js?v=0.3.4';
 
 /**
  * Migrations: MIGRATIONS[n] turns a version-n save into version n+1.

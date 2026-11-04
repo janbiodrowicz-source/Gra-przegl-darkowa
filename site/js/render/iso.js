@@ -3,7 +3,7 @@
  * Grid coords (gx, gy) are continuous: tile (x, y) spans [x, x+1] × [y, y+1].
  * World coords are pixels at zoom 1; z (height) goes up the screen.
  */
-import { clearedTileCode, tileAt } from '../core/map.js?v=0.3.3';
+import { clearedTileCode, tileAt } from '../core/map.js?v=0.3.4';
 
 export const TILE_W = 64;
 export const TILE_H = 32;
