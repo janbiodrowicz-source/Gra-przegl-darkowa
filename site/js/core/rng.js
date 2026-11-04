@@ -1,4 +1,4 @@
-/** Small deterministic random helpers (no DOM, no Math.random inside core). */
+/** Small deterministic random helpers (no DOM, no Math.random inside core): the same seed always gives the same island. */
 
 /** mulberry32 — fast seeded PRNG returning floats in [0, 1). */
 export function mulberry32(seed) {
