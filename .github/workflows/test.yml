@@ -1,0 +1,37 @@
+# Test dymny gry w przeglądarce headless na GitHubie. Odpala się po każdym wypchnięciu na dowolną gałąź
+# oraz ręcznie (Actions → Test gry → Run workflow).
+# Wynik: zielony/czerwony znaczek, podsumowanie z listą testów (OK/FAIL) i zrzuty ekranu (artefakt „zrzuty”).
+name: Test gry
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright z Chromium
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pw" playwright
+          npx --prefix "$RUNNER_TEMP/pw" playwright install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/pw/node_modules" >> "$GITHUB_ENV"
+      - name: Testy logiki (Node)
+        run: node tools/test-core.mjs
+      - name: Test dymny
+        run: |
+          set +e
+          bash tools/testy/uruchom.sh "$RUNNER_TEMP/testy" 2>&1 | tee wynik.txt
+          kod=${PIPESTATUS[0]}
+          { echo '### Wynik testu gry'; echo '```'; cat wynik.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $kod
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zrzuty
+          path: ${{ runner.temp }}/testy/*.png
+          if-no-files-found: warn
