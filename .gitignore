@@ -3,3 +3,6 @@
 dist/
 node_modules/
 shots/
+
+# pliki zaczynające się od kropki: nie ignorujemy folderu z testami na GitHubie
+!.github
