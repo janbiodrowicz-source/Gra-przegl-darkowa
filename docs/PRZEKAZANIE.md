@@ -1,21 +1,20 @@
 # 🧭 Przekazanie projektu „Wysepka” — stan, decyzje, plan
 
-Ten plik jest „pamięcią” projektu. Jeśli zaczynasz nową rozmowę z Claude (lub z kimkolwiek),
-**wklej najpierw ten plik** — zawiera wszystko, co ustaliliśmy, i co zostało do zrobienia.
+Ten plik to decyzje z Janem i szczegółowy plan etapów 2–3. **Przewodnik na start rozmowy jest w `START.md`** (jak pracujemy, wdrażanie, testy).
 Szczegóły techniczne (architektura, sterowanie, narzędzia) są w `README.md`.
 
-_Stan na: listopad 2026, wersja gry 0.3.0, gałąź `ccr-7b241f7d-wcplv4`._
+_Stan na: 04.11.2026, wersja gry 0.3.2._
 
 ---
 
 ## 1. Czym jest gra
 
 Przytulny **idle city builder** na wyspach, czysty HTML5 (bez bibliotek, bez sieci, bez bundlera).
-Cel: publikacja na CrazyGames / itch.io. Działa online (Cloudflare Workers, wgrywany ZIP):
-https://small-water-3eb2.jasko4185.workers.dev
+Cel: publikacja na CrazyGames / itch.io. Działa online na Cloudflare (Workers ze statycznymi plikami z folderu `site/`):
+https://wysepka.jasko4185.workers.dev
 
-**Wgrywanie nowej wersji:** spakuj zawartość folderu `site/` (`cd site && zip -r ../dist/wysepka.zip .`)
-do ZIP → Cloudflare → „Upload and deploy”.
+**Wdrażanie:** wypchnięcie na `main` → Cloudflare buduje sam w ok. minutę (bez ZIP-a). Stary adres
+`small-water-3eb2…` (ręczny ZIP) jest zamrożony.
 
 ## 2. Co już jest (zrobione)
 
@@ -39,7 +38,7 @@ Pełna gra to dziś ok. **1:45–2:00 h** do zdobycia całego archipelagu (18 za
 6. **Transport surowców:** automatyczne trasy **i** jednorazowa wysyłka „na ratunek”.
 7. **Rynek: najpierw systemowy (kupcy NPC)**, rynek z innymi graczami — **później** (wymaga serwera).
 8. Zadania wspólne dla całego archipelagu + (w planie) krótkie zadania dla każdej wyspy.
-9. Styl pracy: po każdym kroku testy, zrzuty, krytyczna ocena, commit + push, nowy ZIP.
+9. Styl pracy: po każdym kroku testy, zrzuty, krytyczna ocena, commit + push (Cloudflare wdraża sam z `main`).
    Odpowiedzi po polsku, z humorem i emoji 😉
 
 ## 4. Plan dalszej pracy
@@ -82,12 +81,12 @@ Pełna gra to dziś ok. **1:45–2:00 h** do zdobycia całego archipelagu (18 za
 
 ### A) Claude Code (najwygodniej, wymaga płatnego planu)
 Nowa sesja z dostępem do repo `janbiodrowicz-source/Gra-przegl-darkowa`. Na start:
-_„Przeczytaj docs/PRZEKAZANIE.md i README.md, kontynuujemy od etapu 2”._
-Claude sam uruchamia testy, zrzuty i bota, commituje i pakuje ZIP.
+_„Przeczytaj START.md, docs/PRZEKAZANIE.md i README.md, kontynuujemy od etapu 2”._
+Claude sam uruchamia testy, zrzuty i bota oraz commituje; wdrożenie robi Cloudflare po scaleniu do `main`.
 
 ### B) Zwykły czat (darmowy plan) — da się, ale ręcznie
 Czat nie ma dostępu do repo ani do uruchamiania kodu, a limity są mniejsze. Dlatego:
-1. Wklej ten plik (`docs/PRZEKAZANIE.md`) na początku rozmowy.
+1. Wklej `START.md` (i ten plik) na początku rozmowy albo użyj promptu ze `START.md`.
 2. Wklejaj **tylko pliki potrzebne do zadania** (cały kod to ~9 400 linii — za dużo naraz):
 
 | Zadanie | Pliki do wklejenia |
@@ -102,7 +101,7 @@ Czat nie ma dostępu do repo ani do uruchamiania kodu, a limity są mniejsze. Dl
    GitHubie (przycisk ✏️ przy pliku → „Commit changes”).
 4. Testy uruchomisz na komputerze z Node 18+: `node tools/test-core.mjs`, `node tools/balance.mjs`;
    grę lokalnie: `node tools/serve.mjs` → http://127.0.0.1:8080/
-5. ZIP zrób ręcznie (punkt 1 tego pliku) i wgraj na Cloudflare.
+5. Po scaleniu do `main` Cloudflare wdraża sam (patrz `START.md`); ZIP-a już nie trzeba.
 
 ### C) Bez Claude
 Kod jest opisany w `README.md` („Jak rozbudowywać”): nowy budynek, nowe zadanie, nowy język,

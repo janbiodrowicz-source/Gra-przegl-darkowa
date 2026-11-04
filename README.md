@@ -1,6 +1,6 @@
 # 🏝️ Wysepka (Tiny Isle)
 
-> 📌 **Kontynuujesz projekt? Zacznij od [`docs/PRZEKAZANIE.md`](docs/PRZEKAZANIE.md)** — stan, decyzje i plan dalszej pracy.
+> 📌 **Kontynuujesz projekt? Zacznij od [`START.md`](START.md)** — przewodnik na jedną rozmowę (jak pracujemy, wdrażanie, testy). Decyzje i plan etapów: [`docs/PRZEKAZANIE.md`](docs/PRZEKAZANIE.md).
 
 Przytulny **idle city builder** na małej wyspie — czysty HTML5: bez bibliotek, bez bundlera,
 bez CDN i bez żadnych zapytań sieciowych. Cała grafika (wyspa, budynki, ikony) jest rysowana kodem:
