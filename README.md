@@ -1,5 +1,7 @@
 # 🏝️ Wysepka (Tiny Isle)
 
+> 📌 **Kontynuujesz projekt? Zacznij od [`docs/PRZEKAZANIE.md`](docs/PRZEKAZANIE.md)** — stan, decyzje i plan dalszej pracy.
+
 Przytulny **idle city builder** na małej wyspie — czysty HTML5: bez bibliotek, bez bundlera,
 bez CDN i bez żadnych zapytań sieciowych. Cała grafika (wyspa, budynki, ikony) jest rysowana kodem:
 canvas 2D dla mapy, inline SVG dla interfejsu. Projekt jest szkieletem pod publikację na
