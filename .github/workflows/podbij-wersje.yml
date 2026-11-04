@@ -1,0 +1,63 @@
+# Automatyczne podbijanie wersji. Po wypchnięciu zmian w site/ bez zmiany numeru wersji GitHub sam
+# podbija łatkę (0.3.2 → 0.3.3) we wszystkich miejscach (wersja.js i ?v=) i dopisuje commit
+# „Automatyczne podbicie wersji…”. Potem uruchamia test (Test gry) na nowym commicie.
+# Ręcznie: Actions → Podbij wersję → Run workflow (puste pole = następna łatka, albo wpisz np. 0.4.0).
+# Logika jest w tools/auto-podbij.sh (da się ją uruchomić lokalnie).
+name: Podbij wersję
+on:
+  push:
+    branches: ['**']
+    paths: ['site/**']
+  workflow_dispatch:
+    inputs:
+      wersja:
+        description: 'Nowa wersja, np. 0.4.0 (puste = następna łatka)'
+        required: false
+        default: ''
+concurrency:
+  group: podbij-${{ github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: write
+  actions: write
+jobs:
+  podbij:
+    # commit z automatu nie uruchamia workflow ponownie, ale na wszelki wypadek pomijamy też po nazwie
+    if: ${{ !startsWith(github.event.head_commit.message, 'Automatyczne podbicie') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Podbij wersję
+        env:
+          BEFORE: ${{ github.event.before }}
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+          FORCE: ${{ inputs.wersja }}
+        run: bash tools/auto-podbij.sh
+      - name: Sprawdź spójność i testy logiki
+        run: |
+          node tools/podbij-wersje.mjs
+          node tools/test-core.mjs | tail -1
+      - name: Commit, wypchnięcie i test
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet; then
+            echo "Wersja już jest poprawna, nic do zmiany."
+            exit 0
+          fi
+          wersja="$(sed -n "s/.*WERSJA = '\([^']*\)'.*/\1/p" site/js/wersja.js)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Automatyczne podbicie wersji do ${wersja}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          # pchnięcie z automatu nie uruchamia testu samo, więc robimy to ręcznie na nowym commicie
+          gh workflow run test.yml --ref "${GITHUB_REF_NAME}"
+          { echo "### Podbito wersję do ${wersja}"; echo "Dopisano commit na gałęzi \`${GITHUB_REF_NAME}\`; test uruchomiony."; } >> "$GITHUB_STEP_SUMMARY"

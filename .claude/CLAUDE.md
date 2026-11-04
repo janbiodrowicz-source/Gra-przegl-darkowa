@@ -7,7 +7,7 @@ Stan z 04.11.2026: wersja gry **0.3.2** (archipelag, etap 1: port, zwiad, 5 wysp
 - Jan pracuje **wyłącznie z telefonu**, nie czyta kodu. Odpowiadaj po polsku, krótko, z odrobiną humoru i emoji; o sobie w formie żeńskiej.
 - **Polecenia do wklejenia w jednym bloku kodu.** **Jeden krok na raz**, po każdym Jan sprawdza grę na telefonie.
 - **Scalanie z `main` tylko po wyraźnej zgodzie Jana.** Praca na osobnej gałęzi.
-- **Każda zmiana kodu = podbicie wersji** (`site/js/wersja.js` i wszystkie `?v=`; skrypt: `node tools/podbij-wersje.mjs X.Y.Z`, kontrola: `node tools/podbij-wersje.mjs`).
+- **Wersję podbija automat** (workflow „Podbij wersję” dopisuje commit „Automatyczne podbicie wersji do X” po wypchnięciu zmian w `site/`); ręcznie tylko większy skok (Actions → Podbij wersję → Run workflow z numerem). Na komputerze: `node tools/podbij-wersje.mjs X.Y.Z|patch`, kontrola: `node tools/podbij-wersje.mjs`. Po wypchnięciu poczekaj na ten commit, zanim wypchniesz kolejną zmianę.
 - **Po każdym wypchnięciu sprawdź wynik testu na GitHubie** (`actions_list`, `list_workflow_jobs`, `get_job_logs`) i zgłoś Janowi zielony/czerwony, zanim powiesz, że zmiana jest gotowa.
 - Nie zmieniaj logiki gry bez prośby. Zasoby tylko własne (grafika rysowana kodem), żadnych zapytań na zewnątrz.
 

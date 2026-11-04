@@ -2,6 +2,7 @@
 /**
  * Podbija numer wersji w jednym ruchu:
  *   node tools/podbij-wersje.mjs 0.3.1     ustawia wersję 0.3.1 we wszystkich miejscach
+ *   node tools/podbij-wersje.mjs patch     następna łatka (0.3.1 → 0.3.2)
  *   node tools/podbij-wersje.mjs           tylko sprawdza spójność (kod 1, gdy coś się rozjechało)
  *
  * Miejsca: site/js/wersja.js, wszystkie importy ?v= w site/js/ i w tools/*.mjs,
@@ -14,14 +15,17 @@ import { fileURLToPath } from 'node:url';
 
 const REPO = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const SITE = join(REPO, 'site');
-const nowa = process.argv[2];
-if (nowa && !/^\d+\.\d+\.\d+$/.test(nowa)) {
-  console.error('Wersja ma wyglądać tak: 1.2.3');
-  process.exit(2);
-}
-
 const wersjaJs = join(SITE, 'js', 'wersja.js');
 const obecna = /WERSJA = '([^']+)'/.exec(readFileSync(wersjaJs, 'utf8'))?.[1];
+let nowa = process.argv[2];
+if (nowa === 'patch') {
+  const [a, b, c] = obecna.split('.').map(Number);
+  nowa = `${a}.${b}.${c + 1}`;
+}
+if (nowa && !/^\d+\.\d+\.\d+$/.test(nowa)) {
+  console.error('Wersja ma wyglądać tak: 1.2.3 (albo: patch)');
+  process.exit(2);
+}
 const cel = nowa || obecna;
 
 function pliki(dir, ext, out = []) {

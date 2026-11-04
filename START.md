@@ -22,13 +22,13 @@ Repo: `janbiodrowicz-source/Gra-przegl-darkowa` (publiczne).
 
 ## Jak wdrażać (bez Claude Code, bez ZIP-a)
 1. Zmień pliki w repo (np. konektorem GitHub w czacie) na osobnej gałęzi, wypchnij.
-2. **Podbij wersję**: `site/js/wersja.js` i wszystkie `?v=` w `site/index.html` oraz `site/js/` (`grep -rn "v=" site/index.html site/js/`). Skrypt `node tools/podbij-wersje.mjs 0.3.3` robi to jednym poleceniem, ale **zwykły czat nie uruchomi Node**. Bez podbicia telefon może pokazywać stare pliki do 5 minut (nagłówek `Cache-Control` w `site/_headers`); `index.html` nigdy się nie zapamiętuje.
+2. **Wersja podbija się sama.** Po wypchnięciu zmian w `site/` bez zmiany numeru GitHub (workflow „Podbij wersję”, `.github/workflows/podbij-wersje.yml`) dopisuje po ok. minucie commit „Automatyczne podbicie wersji do X” (następna łatka) we wszystkich miejscach naraz (`wersja.js` i `?v=`) i uruchamia test. **Nie podbijaj ręcznie**, chyba że chcesz większy skok: Actions → Podbij wersję → Run workflow z numerem (np. 0.4.0) albo konektorem GitHub (`actions_run_trigger`). **Po wypchnięciu odczekaj na ten commit, zanim wypchniesz kolejną zmianę na tę gałąź**, i pobierz gałąź na nowo. Skrypt `node tools/podbij-wersje.mjs` robi to samo na komputerze; `tools/auto-podbij.sh` to logika automatu.
 3. Po zgodzie Jana scal do `main`. Cloudflare buduje w ok. minutę.
 4. Jan sprawdza: `/js/wersja.js` ma nowy numer, potem gra na telefonie.
 - **Czego zwykły czat NIE zrobi:** nie uruchomi gry, testów ani skryptów Node (`tools/balance.mjs`, `tools/podbij-wersje.mjs`, `tools/shots.mjs`). Przeliczenia balansu botem zleć Claude Code albo komuś z komputerem. Zwykły czat czyta wynik testu na GitHubie (niżej).
 
 ## ZASADA: po każdym wypchnięciu sprawdź wynik testu
-Czat nie dostaje powiadomienia o wyniku testu, więc **po każdym wypchnięciu kodu sam go sprawdź** i zgłoś Janowi zielony/czerwony, zanim powiesz, że zmiana jest gotowa. Przez konektor GitHub: `actions_list` (`list_workflow_runs`, filtr `branch`) → `list_workflow_jobs` → `get_job_logs` z `return_content` i `tail_lines`. Test trwa ok. 3 minuty (czasem kolejka GitHuba dłuższa), więc poczekaj chwilę po wypchnięciu. **Czerwony test = napraw przed dalszymi zmianami.** Test uruchamia się po wypchnięciu na każdą gałąź.
+Czat nie dostaje powiadomienia o wyniku testu, więc **po każdym wypchnięciu kodu sam go sprawdź** (na najnowszym commicie, czyli po automatycznym podbiciu wersji) i zgłoś Janowi zielony/czerwony, zanim powiesz, że zmiana jest gotowa. Przez konektor GitHub: `actions_list` (`list_workflow_runs`, filtr `branch`) → `list_workflow_jobs` → `get_job_logs` z `return_content` i `tail_lines`. Test trwa ok. 3 minuty (czasem kolejka GitHuba dłuższa), więc poczekaj chwilę po wypchnięciu. **Czerwony test = napraw przed dalszymi zmianami.** Test uruchamia się po wypchnięciu na każdą gałąź.
 
 ## Okienko diagnostyczne i test
 - **`?debug=1`** w adresie (np. `https://wysepka.jasko4185.workers.dev/?debug=1`): okienko z wersją, FPS, liczbą wysp i sprite'ów oraz ostatnimi błędami (zbieranymi od startu strony). Przycisk **Kopiuj** kopiuje raport do schowka, Jan wkleja go do czatu. Są też przyciski testowe (dodaj surowce, przewiń czas ×10, `clear errors`). Bez `?debug=1` okienka nie ma. Obiekty gry są w `window.__gra`.
@@ -57,9 +57,8 @@ Jeśli `.gitignore` zawiera wzorzec `.*` (ignoruj pliki z kropką), folder `.git
 - **Etap 2 (następny):** transport surowców między wyspami (jednorazowa wysyłka „na ratunek” i trasy automatyczne), wspólny skarbiec monet. **Etap 3:** rynek NPC (kupcy, zmienne ceny). Później: muzyka i ambient, SDK CrazyGames (`platform.js`), prestiż, ewentualny rynek graczy (wymaga serwera). Szczegóły: `docs/PRZEKAZANIE.md`.
 - Wyspa domowa po ok. 45 min przelewa się surowcami, a nowe wyspy rosną wolno (brak transportu).
 - Monety są na razie osobne na każdej wyspie. FPS mierzono bez GPU, więc warto sprawdzić na słabym Androidzie.
-- Opcjonalna propozycja: zadanie na GitHubie, które samo podbija wersję (zwykły czat nie uruchomi skryptu). Do decyzji Jana.
 
 ## Prompt na start nowej rozmowy
 ```
-Przeczytaj START.md z repo janbiodrowicz-source/Gra-przegl-darkowa (gałąź main), potem w razie potrzeby docs/PRZEKAZANIE.md i README.md. Kontynuujemy grę Wysepka. Odpowiadaj po polsku, krótko, żeńskie formy mówiąc o sobie. Nie scalaj z main bez mojej zgody. Podbijaj wersję przy każdej zmianie kodu. Po każdym wypchnięciu sprawdzaj wynik testu w Actions i pisz mi, czy przeszedł. Zaproponuj od czego zacząć i poczekaj na moją decyzję.
+Przeczytaj START.md z repo janbiodrowicz-source/Gra-przegl-darkowa (gałąź main), potem w razie potrzeby docs/PRZEKAZANIE.md i README.md. Kontynuujemy grę Wysepka. Odpowiadaj po polsku, krótko, żeńskie formy mówiąc o sobie. Nie scalaj z main bez mojej zgody. Wersję podbija automat na GitHubie (nie rób tego ręcznie). Po każdym wypchnięciu sprawdzaj wynik testu w Actions i pisz mi, czy przeszedł. Zaproponuj od czego zacząć i poczekaj na moją decyzję.
 ```

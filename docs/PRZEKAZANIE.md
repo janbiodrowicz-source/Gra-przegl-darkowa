@@ -13,7 +13,7 @@ Przytulny **idle city builder** na wyspach, czysty HTML5 (bez bibliotek, bez sie
 Cel: publikacja na CrazyGames / itch.io. Działa online na Cloudflare (Workers ze statycznymi plikami z folderu `site/`):
 https://wysepka.jasko4185.workers.dev
 
-**Wdrażanie:** wypchnięcie na `main` → Cloudflare buduje sam w ok. minutę (bez ZIP-a). Stary adres
+**Wdrażanie:** wypchnięcie na `main` → Cloudflare buduje sam w ok. minutę (bez ZIP-a), a numer wersji podbija automat na GitHubie. Stary adres
 `small-water-3eb2…` (ręczny ZIP) jest zamrożony.
 
 ## 2. Co już jest (zrobione)
