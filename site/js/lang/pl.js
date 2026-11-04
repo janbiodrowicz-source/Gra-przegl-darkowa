@@ -206,7 +206,7 @@ export default {
   'settings.reset': 'Zacznij od nowa',
   'settings.resetHold': 'Przytrzymaj, aby zresetować',
   'settings.resetInfo': 'Usuwa postęp i losuje nową wyspę. Ustawienia zostają.',
-  'settings.version': 'Wersja {v}',
+  'settings.version': 'Wersja {v} 🏝️',
   'settings.storageOff': 'Zapis wyłączony w tej przeglądarce',
 
   'conflict.title': 'Gra otwarta w innej karcie',

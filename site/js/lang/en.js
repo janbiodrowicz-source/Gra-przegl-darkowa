@@ -206,7 +206,7 @@ export default {
   'settings.reset': 'Start over',
   'settings.resetHold': 'Hold to reset',
   'settings.resetInfo': 'Deletes progress and rolls a new island. Settings stay.',
-  'settings.version': 'Version {v}',
+  'settings.version': 'Version {v} 🏝️',
   'settings.storageOff': 'Saving is disabled in this browser',
 
   'conflict.title': 'Game open in another tab',
