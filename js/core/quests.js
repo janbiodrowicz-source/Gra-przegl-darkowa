@@ -2,7 +2,7 @@
  * Quest chain logic. Status per quest: 'locked' → 'active' → 'done' → 'claimed'.
  */
 import { BUILDINGS, BUILDING_ORDER, QUESTS } from '../config.js';
-import { capsOf, countType, grant } from './economy.js';
+import { capsOf, countType, grant, totalCharm } from './economy.js';
 
 export function getQuest(id) {
   return QUESTS.find((q) => q.id === id) || null;
@@ -29,6 +29,8 @@ export function questProgress(state, quest) {
     }
     case 'cleared':
       return { cur: Math.min(state.stats.cleared, g.count), max: g.count };
+    case 'charm':
+      return { cur: Math.min(totalCharm(state), g.amount), max: g.amount };
     case 'resource':
       return { cur: Math.min(Math.floor(state.res[g.res] ?? 0), g.amount), max: g.amount };
     default:

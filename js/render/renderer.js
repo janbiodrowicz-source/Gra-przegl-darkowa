@@ -7,11 +7,11 @@ import { BUILDINGS } from '../config.js';
 import { N, idx, inBounds } from '../core/map.js';
 import { hash2 } from '../core/rng.js';
 import { canPlace } from '../core/actions.js';
-import { buildingAt } from '../core/economy.js';
+import { auraOf, auraTargetsAt, buildingAt } from '../core/economy.js';
 import { getRates } from '../core/sim.js';
 import { HH, HW, LIP, groundCode, groundZ, tileCenter, toGrid } from './iso.js';
 import { bakeTerrain, coastSegments, groundKey, islandBounds } from './terrain.js';
-import { buildingHeight, drawBuilding, drawBuildingDynamic, drawRock, drawTree, hutChimney, tierOf } from './art.js';
+import { BAKERY_CHIMNEY, buildingHeight, drawBuilding, drawBuildingDynamic, drawRock, drawTree, hutChimney, tierOf } from './art.js';
 import { createFx } from './fx.js';
 
 /** Portrait phones: extra zoom over a whole-island fit, and where the island centre sits (0 = top, 1 = bottom of the free area). */
@@ -431,7 +431,7 @@ export function createRenderer({ canvas, game, ui, bus }) {
     const g = c.getContext('2d');
     const tier = tierOf(level);
     const h = buildingHeight(type, tier);
-    const wide = type === 'field' || type === 'warehouse' || type === 'sawmill';
+    const wide = type === 'field' || type === 'warehouse' || type === 'sawmill' || type === 'fisher' || type === 'fountain' || type === 'mill';
     const crop = { x0: wide ? -38 : -32, y0: -(h + 6), w: wide ? 76 : 64, h: h + 6 + (type === 'field' ? 22 : 18) };
     const k = Math.min(c.width / crop.w, c.height / crop.h);
     g.translate(c.width / 2, (c.height - crop.h * k) / 2 - crop.y0 * k);
@@ -568,6 +568,15 @@ export function createRenderer({ canvas, game, ui, bus }) {
           smokeAt.set(b.id, time + (reduced ? 1.2 : 0.38) + Math.random() * 0.25);
         }
         continue;
+      }
+      if (b.type === 'bakery' && (rates.per.get(b.id)?.workers ?? 0) > 0) {
+        const next = smokeAt.get(b.id) ?? time + hash2(b.id, 1) * 0.8;
+        if (time >= next) {
+          fx.spawn('smoke', c.x + BAKERY_CHIMNEY.x, c.y - z + BAKERY_CHIMNEY.y, {
+            vx: 4 + Math.random() * 3, vy: -12 - Math.random() * 6, r: 2.8, grow: 7, life: 2.6, alpha: 0.6, drag: 0.4,
+          });
+          smokeAt.set(b.id, time + (reduced ? 1.2 : 0.42) + Math.random() * 0.25);
+        }
       }
       const def = BUILDINGS[b.type];
       if (!def.produce) continue;
@@ -757,7 +766,10 @@ export function createRenderer({ canvas, game, ui, bus }) {
     for (let y = 0; y < N; y++) {
       for (let x = 0; x < N; x++) {
         const r = canPlace(state, type, x, y);
-        if (r.ok || r.reason === 'cost') list.push({ x, y, bonus: r.bonus || 0 });
+        if (!(r.ok || r.reason === 'cost')) continue;
+        // aura buildings (wells) light up where they would help the most neighbours
+        const bonus = (r.bonus || 0) + (BUILDINGS[type].aura ? auraTargetsAt(state, type, x, y) * auraOf(type, 1) : 0);
+        list.push({ x, y, bonus });
       }
     }
     placeCache = { key, state, tiles: list };
@@ -808,11 +820,12 @@ export function createRenderer({ canvas, game, ui, bus }) {
     const type = ui.state.placing;
     const check = canPlace(state, type, g.x, g.y);
     const bonus = check.bonus || 0;
-    if (!(check.ok && bonus > 0)) return;
+    const auraN = BUILDINGS[type].aura ? auraTargetsAt(state, type, g.x, g.y) : 0;
+    if (!(check.ok && (bonus > 0 || auraN > 0))) return;
     const c = tileCenter(g.x, g.y);
     const z = groundZ(state.tiles, g.x, g.y);
     const [sx, sy] = worldToScreen(c.x, c.y - z - buildingHeight(type, 1) - 10);
-    const label = `+${Math.round(bonus * 100)}%`;
+    const label = auraN > 0 ? `+${Math.round(auraOf(type, 1) * 100)}% ×${auraN}` : `+${Math.round(bonus * 100)}%`;
     ctx.font = '900 13px ui-rounded, "SF Pro Rounded", Nunito, Inter, system-ui, sans-serif';
     const w = ctx.measureText(label).width + 20;
     const h = 22;

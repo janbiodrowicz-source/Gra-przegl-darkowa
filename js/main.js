@@ -43,7 +43,7 @@ async function boot() {
   if (DEMO) {
     // Demo island for screenshots: never written to storage.
     const { buildDemoState } = await import('./dev/demo.js');
-    game.state = buildDemoState();
+    game.state = buildDemoState(undefined, params.get('demo') === '2' ? 2 : 1);
     game.readOnly = true;
     game.lastReport = null;
   }

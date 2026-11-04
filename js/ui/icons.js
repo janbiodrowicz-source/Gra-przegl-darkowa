@@ -94,6 +94,7 @@ const UI = {
     <circle cx="12" cy="9.3" r="3.6" fill="currentColor"/>
     <path d="M7.2 8.4a4.8 4.8 0 0 1 9.6 0z" fill="currentColor" opacity=".55"/>
     <path d="M5 20.5a7 7 0 0 1 14 0z" fill="currentColor"/>`,
+  drop: `<path d="M12 3.5c3.2 4.3 6 7.6 6 10.8a6 6 0 0 1-12 0c0-3.2 2.8-6.5 6-10.8z" fill="currentColor"/><path d="M9.3 14.6a2.8 2.8 0 0 0 2.2 2.6" stroke="#fff" stroke-opacity=".7" stroke-width="1.5" stroke-linecap="round" fill="none"/>`,
   home: `<path d="M4.5 11 12 4.5l7.5 6.5M6.8 9.4v9.8h10.4V9.4" ${S} stroke-width="2.2"/><path d="M10.2 19.2v-5h3.6v5" ${S} stroke-width="2"/>`,
   box: `<path d="M4.5 8 12 4.5 19.5 8v8.5L12 20l-7.5-3.5z" ${S} stroke-width="2"/><path d="M4.5 8 12 11.5 19.5 8M12 11.5V20" ${S} stroke-width="2"/>`,
   hand: `<path d="M9.4 21.2c-1.8 0-3.2-1.3-3.6-3l-1.4-5a1.5 1.5 0 0 1 2.8-1l1 1.9V5.4a1.6 1.6 0 0 1 3.2 0v5.4h.3V9a1.6 1.6 0 0 1 3.2 0v1.8h.3V10a1.6 1.6 0 0 1 3.2 0v1h.1a1.5 1.5 0 0 1 3 0v4.4c0 3.2-2.6 5.8-5.8 5.8z" fill="#fffaf0" stroke="#3b2a20" stroke-width="1.5" stroke-linejoin="round"/>`,
@@ -166,6 +167,67 @@ const BLD = {
     <rect x="14.5" y="21.5" width="11" height="12.5" rx="1" fill="#7a4a2c"/>
     <path d="M14.5 21.5l11 12.5M25.5 21.5l-11 12.5" stroke="#f2c48d" stroke-width="1.4"/>
     <circle cx="20" cy="12.6" r="2" fill="#fbe3b5"/>`,
+  fisher: `
+    <ellipse cx="20" cy="34.5" rx="15" ry="2.6" fill="#3b2a20" opacity=".14"/>
+    <path d="M3 30.5h34v3.5H3z" fill="#4fb3d9"/>
+    <path d="M6 30.5V25M14 30.5V25M22 30.5V25" stroke="#8a5a36" stroke-width="2"/>
+    <rect x="4" y="23" width="21" height="3" rx="1" fill="#c27a3d"/>
+    <rect x="22" y="15" width="13" height="11" rx="1" fill="#fff4de"/>
+    <path d="M20 16.5 28.5 9l8.5 7.5z" fill="#2aa99b"/>
+    <rect x="26.5" y="19.5" width="4" height="6.5" fill="#7d4f2f"/>
+    <path d="M8 23 11 6" stroke="#8a5a36" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M11 6c3 3 4 7 3.6 11" stroke="#3b2a20" stroke-width=".8" fill="none"/>
+    <path d="M10.5 18.5c1.8-1.6 4.6-1.6 6.4 0-1.8 1.6-4.6 1.6-6.4 0zM16.9 18.5l2-1.5v3z" fill="#8fb4c9"/>`,
+  well: `
+    <ellipse cx="20" cy="34.5" rx="13" ry="2.6" fill="#3b2a20" opacity=".14"/>
+    <path d="M9 23h22v10a3 3 0 0 1-3 3H12a3 3 0 0 1-3-3z" fill="#b9c3cb"/>
+    <path d="M9 27h22M9 31h22M15 23v4M25 23v4M20 27v4M14 31v5M26 31v5" stroke="#97a2ac" stroke-width="1"/>
+    <ellipse cx="20" cy="23" rx="11" ry="3" fill="#dbe2e7"/>
+    <ellipse cx="20" cy="23" rx="8" ry="2" fill="#3f9fc6"/>
+    <path d="M11 23V11M29 23V11" stroke="#8a5a36" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M7 12 20 5l13 7z" fill="#e57b4f"/>
+    <path d="M20 5l13 7H20z" fill="#c4613b"/>
+    <path d="M20 12v6" stroke="#5e4330" stroke-width="1"/>
+    <rect x="17.5" y="17.5" width="5" height="4" rx="1" fill="#a06f46"/>`,
+  mill: `
+    <ellipse cx="20" cy="35" rx="12" ry="2.4" fill="#3b2a20" opacity=".14"/>
+    <path d="M13 35 15 15h10l2 20z" fill="#fff4de"/>
+    <path d="M20 15h5l2 20h-7z" fill="#ddc195"/>
+    <path d="M13.5 15.5 20 9l6.5 6.5z" fill="#9d5a3c"/>
+    <rect x="18" y="28" width="4" height="7" rx="1.5" fill="#7d4f2f"/>
+    <g stroke="#8a5a36" stroke-width="1.6" stroke-linecap="round"><path d="M20 15 9 4M20 15l11-11M20 15 9 26M20 15l11 11"/></g>
+    <g fill="#f7ead0" stroke="#c9a77a" stroke-width=".6"><path d="M9.5 4.5 13 3.5l5 5-3.5 1zM30.5 4.5l1 3.5-5 5-1-3.5zM9.5 25.5l-1-3.5 5-5 1 3.5zM30.5 25.5 27 26.5l-5-5 3.5-1z"/></g>
+    <circle cx="20" cy="15" r="2" fill="#6e4529"/>`,
+  bakery: `
+    <ellipse cx="20" cy="34.5" rx="15" ry="2.6" fill="#3b2a20" opacity=".14"/>
+    <rect x="6" y="18" width="28" height="16" rx="1.4" fill="#fff4de"/>
+    <path d="M20 18h14v16H20z" fill="#f2dcb4"/>
+    <path d="M3.5 19.5 20 9l16.5 10.5z" fill="#c4613b"/>
+    <path d="M20 9l16.5 10.5H20z" fill="#a8502f"/>
+    <rect x="26" y="7" width="4" height="8" fill="#b9c3cb"/>
+    <circle cx="28.5" cy="4.5" r="2.2" fill="#e8e8e8" opacity=".85"/>
+    <rect x="9.5" y="23" width="7" height="11" rx="1" fill="#7d4f2f"/>
+    <path d="M22 24h9v5h-9z" fill="#ffe39a"/>
+    <ellipse cx="26.5" cy="21" rx="4.6" ry="2.2" fill="#d99a4a"/>
+    <path d="M24 20.4l1.2 1.4M26.4 20l1.2 1.4M28.8 20.4l1.2 1.4" stroke="#f6cf9c" stroke-width=".9" stroke-linecap="round"/>`,
+  flowers: `
+    <ellipse cx="20" cy="31" rx="15" ry="5" fill="#8a5a36"/>
+    <ellipse cx="20" cy="29.5" rx="14" ry="4.6" fill="#6dbb58"/>
+    <g fill="#4f9c47"><ellipse cx="12" cy="27" rx="3" ry="1.6"/><ellipse cx="27" cy="27.5" rx="3" ry="1.6"/><ellipse cx="20" cy="31" rx="3" ry="1.6"/></g>
+    <g fill="#ff7a9a"><circle cx="11" cy="24" r="2.6"/><circle cx="24" cy="21" r="2.6"/><circle cx="18" cy="28" r="2.4"/></g>
+    <g fill="#ffd166"><circle cx="17" cy="20.5" r="2.6"/><circle cx="29" cy="25" r="2.6"/></g>
+    <g fill="#b48cf2"><circle cx="22.5" cy="27" r="2.3"/><circle cx="13.5" cy="29.5" r="2"/></g>
+    <g fill="#fff6e4"><circle cx="11" cy="24" r=".9"/><circle cx="24" cy="21" r=".9"/><circle cx="17" cy="20.5" r=".9"/><circle cx="29" cy="25" r=".9"/></g>`,
+  fountain: `
+    <ellipse cx="20" cy="34" rx="16" ry="3" fill="#3b2a20" opacity=".14"/>
+    <path d="M4 26h32v4a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z" fill="#b9c3cb"/>
+    <ellipse cx="20" cy="26" rx="16" ry="4.5" fill="#dbe2e7"/>
+    <ellipse cx="20" cy="26" rx="13" ry="3.3" fill="#4fb3d9"/>
+    <rect x="17.5" y="15" width="5" height="11" fill="#c6d0d9"/>
+    <ellipse cx="20" cy="15" rx="7" ry="2" fill="#dbe2e7"/>
+    <ellipse cx="20" cy="15" rx="5" ry="1.3" fill="#4fb3d9"/>
+    <path d="M20 14c0-4 1-7 0-9-1 2 0 5 0 9z" fill="#8fd6f0"/>
+    <path d="M14 15c-3 2-4 6-4 9M26 15c3 2 4 6 4 9" stroke="#8fd6f0" stroke-width="1.4" fill="none" stroke-linecap="round"/>`,
 };
 
 function svg(body, viewBox, cls) {

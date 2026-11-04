@@ -8,7 +8,7 @@
 
 export const GAME = Object.freeze({
   id: 'wysepka',
-  version: '0.1.0',
+  version: '0.2.0',
   saveVersion: 1,
   saveKey: 'wysepka.save',
   backupKey: 'wysepka.save.bak',
@@ -52,6 +52,7 @@ export const BALANCE = Object.freeze({
   costGrowth: 1.15,        // each next building of the same type costs ×1.15
   upgradeGrowth: 1.15,     // each next level costs ×1.15
   maxLevel: 10,
+  charmCoinBonus: 0.04,    // each point of charm (decorations) adds +4 % to all coin income
   /** What clearing a tile gives (tile code → resources). */
   clearYield: Object.freeze({
     t: Object.freeze({ wood: 6 }),
@@ -69,6 +70,10 @@ export const BALANCE = Object.freeze({
  *  storage     – extra wood/stone/food limit at level 1 (+storagePerLevel per level)
  *  adjacency   – production bonus per neighbouring tile/building of `kind` (8-neighbourhood)
  *                kind: 'water' | 'tree' | 'rock' | any building id
+ *  aura        – bonus this building gives to neighbouring buildings of `targets`
+ *                ({ targets, bonus, bonusPerLevel }) — e.g. a well waters nearby fields
+ *  charm       – decoration points (+charmPerLevel); charm raises all coin income
+ *  coastal     – must be placed next to water
  *  unlock      – id of the quest that must be claimed first
  */
 export const BUILDINGS = Object.freeze({
@@ -112,10 +117,54 @@ export const BUILDINGS = Object.freeze({
     storage: 150, storagePerLevel: 100,
     unlock: 'q4',
   }),
+  /* ---- second wave (after the first five quests) ---- */
+  fisher: Object.freeze({
+    cost: { wood: 60, stone: 20 },
+    upgrade: { wood: 50, stone: 30, coins: 70 },
+    produce: { food: 0.55 },
+    workers: 1, workersPerLevel: 1,
+    adjacency: { kind: 'water', bonus: 0.12 },
+    coastal: true,
+    unlock: 'q5',
+  }),
+  well: Object.freeze({
+    cost: { wood: 40, stone: 50 },
+    upgrade: { wood: 30, stone: 60, coins: 80 },
+    aura: { targets: ['field', 'bakery'], bonus: 0.25, bonusPerLevel: 0.05 },
+    unlock: 'q5',
+  }),
+  mill: Object.freeze({
+    cost: { wood: 120, stone: 70, coins: 60 },
+    upgrade: { wood: 80, stone: 60, coins: 100 },
+    produce: { food: 0.5 },
+    workers: 2, workersPerLevel: 1,
+    adjacency: { kind: 'field', bonus: 0.2 },
+    unlock: 'q6',
+  }),
+  bakery: Object.freeze({
+    cost: { wood: 120, stone: 90, coins: 150 },
+    upgrade: { wood: 70, stone: 80, coins: 130 },
+    produce: { food: 0.35, coins: 0.35 },
+    workers: 2, workersPerLevel: 1,
+    adjacency: { kind: 'mill', bonus: 0.3 },
+    unlock: 'q7',
+  }),
+  flowers: Object.freeze({
+    cost: { wood: 20, coins: 60 },
+    upgrade: { wood: 10, coins: 90 },
+    charm: 1, charmPerLevel: 1,
+    unlock: 'q8',
+  }),
+  fountain: Object.freeze({
+    cost: { stone: 200, coins: 500 },
+    upgrade: { stone: 120, coins: 400 },
+    charm: 6, charmPerLevel: 2,
+    unlock: 'q10',
+  }),
 });
 
 /** Build bar order. */
-export const BUILDING_ORDER = Object.freeze(['hut', 'field', 'sawmill', 'quarry', 'market', 'warehouse']);
+export const BUILDING_ORDER = Object.freeze(['hut', 'field', 'sawmill', 'quarry', 'market', 'warehouse', 'fisher', 'well', 'mill', 'bakery', 'flowers', 'fountain']);
 
 /**
  * Quest chain. Each quest becomes active after the previous one is claimed.
@@ -125,6 +174,7 @@ export const BUILDING_ORDER = Object.freeze(['hut', 'field', 'sawmill', 'quarry'
  *   level    { level }                       – any building reaches that level
  *   cleared  { count }                       – clear that many trees/rocks
  *   resource { res, amount }                 – hold that much of a resource
+ *   charm    { amount }                      – reach that much charm (decorations)
  */
 export const QUESTS = Object.freeze([
   Object.freeze({ id: 'q1', goal: { type: 'have', buildings: { field: 1 } }, reward: { wood: 20 } }),
@@ -132,6 +182,16 @@ export const QUESTS = Object.freeze([
   Object.freeze({ id: 'q3', goal: { type: 'have', buildings: { hut: 4 } }, reward: { wood: 40, stone: 25 } }),
   Object.freeze({ id: 'q4', goal: { type: 'level', level: 2 }, reward: { coins: 50 } }),
   Object.freeze({ id: 'q5', goal: { type: 'pop', count: 30 }, reward: { coins: 200 } }),
+  // second set: ~30–60 more minutes
+  Object.freeze({ id: 'q6', goal: { type: 'have', buildings: { fisher: 1, well: 1 } }, reward: { food: 60, coins: 120 } }),
+  Object.freeze({ id: 'q7', goal: { type: 'have', buildings: { mill: 1, field: 5 } }, reward: { wood: 80, stone: 60 } }),
+  Object.freeze({ id: 'q8', goal: { type: 'have', buildings: { bakery: 1 } }, reward: { coins: 200 } }),
+  Object.freeze({ id: 'q9', goal: { type: 'charm', amount: 8 }, reward: { coins: 250 } }),
+  Object.freeze({ id: 'q10', goal: { type: 'pop', count: 60 }, reward: { stone: 100, coins: 300 } }),
+  Object.freeze({ id: 'q11', goal: { type: 'level', level: 6 }, reward: { wood: 150, stone: 150 } }),
+  Object.freeze({ id: 'q12', goal: { type: 'resource', res: 'food', amount: 800 }, reward: { coins: 500 } }),
+  Object.freeze({ id: 'q13', goal: { type: 'charm', amount: 30 }, reward: { coins: 700 } }),
+  Object.freeze({ id: 'q14', goal: { type: 'pop', count: 150 }, reward: { coins: 1000 } }),
 ]);
 
 /** Prestige is only a hook for now (see js/core/prestige.js). */

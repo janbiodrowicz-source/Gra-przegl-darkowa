@@ -622,7 +622,269 @@ export function warehouseCrane(g, tier, t) {
   g.fillRect(cx, cy, 4, 6);
 }
 
-const BUILDING_DRAW = { hut, field, sawmill, quarry, market, warehouse };
+
+/* ------------------------------------------------ second wave buildings */
+
+function fisher(g, tier) {
+  shadow(g, 0, 0.02, 26, 0.14);
+  // wooden pier towards the front-right (+x), on stilts
+  const deckZ = 3;
+  for (const [x, y] of [[0.08, 0.3], [0.44, 0.3], [0.08, 0.12], [0.44, 0.12]]) box(g, x, y, 0.02, 0.02, -4, deckZ + 4, PAL.darkWood);
+  box(g, 0.24, 0.2, 0.24, 0.14, deckZ, 2.5, PAL.wood);
+  for (let i = 0; i < 6; i++) line(g, [0.02 + i * 0.08, 0.06, deckZ + 2.6], [0.02 + i * 0.08, 0.34, deckZ + 2.6], 'rgba(120, 70, 35, 0.4)', 0.8);
+  // little hut at the back-left
+  const hx = 0.2, hy = 0.18;
+  box(g, -0.18, -0.16, hx, hy, 0, 14, PAL.cream);
+  onY(g, -0.16 + hy + 0.001, -0.24, -0.14, 0, 9, PAL.door);
+  windowX(g, -0.18 + hx, -0.16, 0.1, 5, 5, tier === 3);
+  roofX(g, -0.18, -0.16, hx, hy, 14, 10, 0.05, PAL.roofTeal);
+  // drying fish line
+  line(g, [-0.42, 0.18, 12], [-0.1, 0.36, 12], '#6e4529', 0.9);
+  for (const f of [0.25, 0.5, 0.75]) {
+    const x = -0.42 + 0.32 * f, y = 0.18 + 0.18 * f;
+    g.beginPath();
+    g.ellipse(PX(x, y), PY(x, y, 9), 1.6, 3, 0, 0, TAU);
+    g.fillStyle = '#8fb4c9';
+    g.fill();
+  }
+  for (const [x, y] of [[-0.42, 0.18], [-0.1, 0.36]]) box(g, x, y, 0.015, 0.015, 0, 13, PAL.darkWood);
+  // barrels and nets from tier 2
+  if (tier >= 2) {
+    const bx = PX(0.38, 0.26), by = PY(0.38, 0.26, deckZ + 2.5);
+    g.fillStyle = '#9c6a3f';
+    g.fillRect(bx - 3.5, by - 8, 7, 8);
+    g.fillStyle = '#c38a52';
+    g.beginPath();
+    g.ellipse(bx, by - 8, 3.5, 1.7, 0, 0, TAU);
+    g.fill();
+  }
+  if (tier === 3) {
+    g.beginPath();
+    g.ellipse(PX(0.16, 0.24), PY(0.16, 0.24, deckZ + 3), 6, 2.6, 0, 0, TAU);
+    g.fillStyle = 'rgba(205, 180, 130, 0.9)';
+    g.fill();
+  }
+}
+
+/** Little rowing boat bobbing next to the pier (drawn every frame). */
+export function fisherBoat(g, tier, t) {
+  const bob = Math.sin(t * 1.8) * 1.2;
+  const cx = PX(0.5, 0.0), cy = PY(0.5, 0.0, 0) + bob;
+  g.beginPath();
+  g.moveTo(cx - 11, cy - 2);
+  g.quadraticCurveTo(cx, cy + 6, cx + 11, cy - 2);
+  g.closePath();
+  g.fillStyle = tier === 3 ? '#1d8a7f' : '#b06c37';
+  g.fill();
+  g.fillStyle = '#e9c38f';
+  g.fillRect(cx - 9, cy - 3, 18, 1.6);
+  g.strokeStyle = '#6e4529';
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(cx - 3, cy - 2);
+  g.lineTo(cx - 9, cy + 4);
+  g.stroke();
+}
+
+function well(g, tier) {
+  shadow(g, 0, 0.03, 20, 0.16);
+  // stone ring (an octagon approximated by a squat box + rim)
+  const r = tier === 3 ? 0.2 : 0.17;
+  box(g, 0, 0, r, r, 0, 9, PAL.stone);
+  for (let i = 0; i < 3; i++) line(g, [-r, r + 0.002, 3 + i * 3], [r, r + 0.002, 3 + i * 3], 'rgba(120, 130, 140, 0.5)', 0.7);
+  poly(g, [[-r + 0.04, -r + 0.04, 9.1], [r - 0.04, -r + 0.04, 9.1], [r - 0.04, r - 0.04, 9.1], [-r + 0.04, r - 0.04, 9.1]], '#3f9fc6');
+  poly(g, [[-r + 0.04, -r + 0.04, 9.2], [0, -r + 0.04, 9.2], [-r + 0.04, 0, 9.2]], 'rgba(255,255,255,0.35)');
+  // posts + roof
+  for (const y of [-r, r]) box(g, 0, y, 0.02, 0.02, 9, 20, PAL.darkWood);
+  line(g, [0, -r, 24], [0, r, 24], '#6e4529', 1.4);
+  box(g, 0.0, 0.0, 0.04, 0.03, 18, 4, PAL.wood);
+  line(g, [0, 0, 18], [0, 0, 10], '#5e4330', 0.8);
+  roofY(g, 0, 0, 0.12, r + 0.02, 27, 9, 0.04, tier === 3 ? PAL.roofBrown : PAL.roofRed);
+  // flowers and a bucket at higher tiers
+  if (tier >= 2) {
+    for (const [x, y, c] of [[0.3, 0.2, '#ff7a9a'], [0.32, 0.06, '#ffd166'], [-0.28, 0.3, '#fff1f1']]) dot(g, PX(x, y), PY(x, y, 2), 2, c);
+    box(g, 0.24, 0.3, 0.04, 0.04, 0, 5, PAL.wood);
+  }
+}
+
+function mill(g, tier) {
+  shadow(g, 0.02, 0.03, 24, 0.18);
+  // tapered tower: three stacked boxes
+  const base = tier === 3 ? PAL.stone : PAL.plaster;
+  box(g, 0, 0, 0.22, 0.22, 0, 14, base);
+  box(g, 0, 0, 0.19, 0.19, 14, 14, PAL.plaster);
+  box(g, 0, 0, 0.16, 0.16, 28, 12, PAL.plaster);
+  // door, windows
+  onY(g, 0.221, -0.06, 0.06, 0, 10, PAL.door);
+  windowY(g, 0.191, 0, 0.07, 18, 5, tier === 3);
+  windowX(g, 0.161, 0, 0.07, 31, 4);
+  // cap roof
+  roofX(g, 0, 0, 0.16, 0.16, 40, 11, 0.05, PAL.roofBrown);
+  // sacks
+  for (const [x, y] of tier >= 2 ? [[0.3, 0.28], [0.36, 0.14], [0.22, 0.36]] : [[0.3, 0.28]]) {
+    g.beginPath();
+    g.ellipse(PX(x, y), PY(x, y, 3.5), 4, 4.5, 0, 0, TAU);
+    g.fillStyle = '#efe0c0';
+    g.fill();
+    dot(g, PX(x, y), PY(x, y, 8.5), 1.2, '#c9a77a');
+  }
+}
+
+/** Turning sails on the +y face (drawn every frame). */
+export function millSails(g, tier, t) {
+  const cx = PX(0, 0.26), cy = PY(0, 0.26, 38);
+  const len = tier === 1 ? 26 : 30;
+  const a0 = t * 1.4;
+  for (let i = 0; i < 4; i++) {
+    const a = a0 + (i * Math.PI) / 2;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    // the sail plane faces the viewer at a slant: squash x a little
+    const ex = cx + ca * len * 0.8, ey = cy + sa * len;
+    g.strokeStyle = '#7e5232';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.moveTo(cx, cy);
+    g.lineTo(ex, ey);
+    g.stroke();
+    const px = -sa * 0.8, py = ca; // perpendicular
+    const w = 5;
+    g.beginPath();
+    g.moveTo(cx + ca * 6 * 0.8, cy + sa * 6);
+    g.lineTo(ex, ey);
+    g.lineTo(ex + px * w, ey + py * w);
+    g.lineTo(cx + ca * 6 * 0.8 + px * w, cy + sa * 6 + py * w);
+    g.closePath();
+    g.fillStyle = tier === 3 ? 'rgba(255, 240, 220, 0.95)' : 'rgba(247, 234, 208, 0.95)';
+    g.fill();
+    g.strokeStyle = 'rgba(160, 120, 80, 0.6)';
+    g.lineWidth = 0.6;
+    g.stroke();
+  }
+  dot(g, cx, cy, 2.4, '#6e4529');
+}
+
+function bakery(g, tier) {
+  shadow(g, 0.03, 0.03, 28, 0.18);
+  const hx = 0.32, hy = 0.27, wallH = 17;
+  box(g, 0, 0, hx, hy, 0, wallH, tier === 3 ? PAL.plaster : PAL.cream);
+  // timber frame
+  line(g, [-hx, hy + 0.002, wallH - 1], [hx, hy + 0.002, wallH - 1], '#b98a5e', 1.3);
+  line(g, [hx + 0.002, hy, wallH - 1], [hx + 0.002, -hy, wallH - 1], '#9c7148', 1.3);
+  // door + shop window with bread
+  onY(g, hy + 0.001, -0.22, -0.1, 0, 11, PAL.door);
+  onY(g, hy + 0.002, 0.0, 0.24, 4, 11, '#fff6e4');
+  onY(g, hy + 0.003, 0.02, 0.22, 5, 10, PAL.windowLit);
+  for (const x of [0.06, 0.12, 0.18]) {
+    g.beginPath();
+    g.ellipse(PX(x, hy + 0.004), PY(x, hy + 0.004, 6.5), 2.6, 1.6, 0, 0, TAU);
+    g.fillStyle = '#c98443';
+    g.fill();
+  }
+  // striped awning over the window
+  for (let i = 0; i < 4; i++) {
+    const a = 0.0 + i * 0.06, b = a + 0.06;
+    poly(g, [[a, hy, 13], [b, hy, 13], [b, hy + 0.1, 10], [a, hy + 0.1, 10]], i % 2 ? '#fff4dc' : '#e57b4f');
+  }
+  windowX(g, hx, 0, 0.12, 6, 6, true);
+  roofX(g, 0, 0, hx, hy, wallH, 13, 0.06, PAL.roofRed);
+  // brick chimney (the oven) at the back
+  box(g, -0.18, -0.12, 0.05, 0.05, wallH + 2, 16, { top: '#b86a4a', left: '#a65d3e', right: '#8a4a30' });
+  // sign + bench at higher tiers
+  if (tier >= 2) {
+    box(g, hx + 0.08, 0.2, 0.012, 0.012, 0, 14, PAL.darkWood);
+    g.beginPath();
+    g.ellipse(PX(hx + 0.08, 0.2), PY(hx + 0.08, 0.2, 16), 4.5, 3.2, 0, 0, TAU);
+    g.fillStyle = '#ffd45c';
+    g.fill();
+  }
+  if (tier === 3) box(g, -0.36, 0.36, 0.08, 0.03, 0, 4, PAL.wood);
+}
+
+/** Where bakery smoke comes out (world offset from the tile centre). */
+export const BAKERY_CHIMNEY = { x: PX(-0.18, -0.12), y: PY(-0.18, -0.12, 17 + 2 + 16 + 2) };
+
+const FLOWER_COLS = ['#ff7a9a', '#ffd166', '#b48cf2', '#fff1f1', '#ff9f5a'];
+
+function flowers(g, tier) {
+  shadow(g, 0, 0.02, 22, 0.1);
+  const r = 0.3;
+  // raised bed with a stone/wood edge
+  box(g, 0, 0, r, r, 0, 3, tier === 3 ? PAL.stone : PAL.darkWood);
+  poly(g, [[-r + 0.02, -r + 0.02, 3.1], [r - 0.02, -r + 0.02, 3.1], [r - 0.02, r - 0.02, 3.1], [-r + 0.02, r - 0.02, 3.1]], '#7a5a3a');
+  const n = tier === 1 ? 9 : tier === 2 ? 14 : 18;
+  for (let i = 0; i < n; i++) {
+    const fx = ((i * 0.618) % 1) * 2 * (r - 0.06) - (r - 0.06);
+    const fy = ((i * 0.382 + 0.17) % 1) * 2 * (r - 0.06) - (r - 0.06);
+    const sx = PX(fx, fy), sy = PY(fx, fy, 3);
+    g.fillStyle = '#4f9c47';
+    g.fillRect(sx - 0.5, sy - 5, 1, 5);
+    g.beginPath();
+    g.ellipse(sx - 1.8, sy - 2.5, 1.8, 0.9, 0.5, 0, TAU);
+    g.fillStyle = '#5daa4f';
+    g.fill();
+    dot(g, sx, sy - 6, 2.2, FLOWER_COLS[i % FLOWER_COLS.length]);
+    dot(g, sx, sy - 6, 0.8, '#fff6e4');
+  }
+  // a little bench at tier 2+, a lantern at tier 3
+  if (tier >= 2) {
+    box(g, 0.0, r + 0.1, 0.16, 0.04, 3, 1.6, PAL.wood);
+    for (const x of [-0.13, 0.13]) box(g, x, r + 0.1, 0.012, 0.03, 0, 3, PAL.darkWood);
+  }
+  if (tier === 3) {
+    line(g, [r + 0.08, -r, 0], [r + 0.08, -r, 18], '#5e4330', 1.4);
+    dot(g, PX(r + 0.08, -r), PY(r + 0.08, -r, 19), 4.5, 'rgba(255, 220, 120, 0.35)');
+    dot(g, PX(r + 0.08, -r), PY(r + 0.08, -r, 19), 1.9, '#ffe08a');
+  }
+}
+
+function fountain(g, tier) {
+  shadow(g, 0, 0.02, 32, 0.14);
+  const r = 0.4;
+  // basin
+  box(g, 0, 0, r, r, 0, 6, PAL.stone);
+  poly(g, [[-r + 0.05, -r + 0.05, 6.1], [r - 0.05, -r + 0.05, 6.1], [r - 0.05, r - 0.05, 6.1], [-r + 0.05, r - 0.05, 6.1]], '#4fb3d9');
+  poly(g, [[-r + 0.05, -r + 0.05, 6.2], [0.05, -r + 0.05, 6.2], [-r + 0.05, 0.05, 6.2]], 'rgba(255,255,255,0.22)');
+  // pillar and upper bowl
+  box(g, 0, 0, 0.06, 0.06, 6, 16, PAL.stone);
+  box(g, 0, 0, 0.17, 0.17, 22, 3, PAL.stone);
+  poly(g, [[-0.14, -0.14, 25.1], [0.14, -0.14, 25.1], [0.14, 0.14, 25.1], [-0.14, 0.14, 25.1]], '#6cc3e3');
+  if (tier >= 2) {
+    box(g, 0, 0, 0.035, 0.035, 25, 9, PAL.stone);
+    box(g, 0, 0, 0.09, 0.09, 34, 2, PAL.stone);
+  }
+  // corner flowers / gold trim
+  if (tier >= 2) for (const [x, y] of [[-r, r], [r, r], [r, -r]]) dot(g, PX(x, y), PY(x, y, 8), 2.2, '#ff7a9a');
+  if (tier === 3) line(g, [-r, r + 0.003, 5.5], [r, r + 0.003, 5.5], '#ffd45c', 1.2);
+}
+
+/** Splashing water (drawn every frame). */
+export function fountainWater(g, tier, t) {
+  const top = tier >= 2 ? 37 : 26;
+  const cx = PX(0, 0), cy = PY(0, 0, top);
+  g.fillStyle = 'rgba(190, 235, 250, 0.85)';
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU + t * 0.6;
+    const p = (t * 1.6 + i / 6) % 1; // 0..1 along the arc
+    const dx = Math.cos(a) * 12 * p;
+    const dy = Math.sin(a) * 6 * p;
+    const h = 10 * p * (1 - p) * 4;
+    dot(g, cx + dx, cy - h + dy + p * (top - 25) * 0.5, 1.4, 'rgba(190, 235, 250, 0.9)');
+  }
+  // central jet
+  const jet = 7 + Math.sin(t * 6) * 1.2;
+  g.beginPath();
+  g.ellipse(cx, cy - jet / 2, 1.4, jet / 2, 0, 0, TAU);
+  g.fill();
+  // ripples in the basin
+  const k = (t * 0.7) % 1;
+  g.beginPath();
+  g.ellipse(PX(0, 0), PY(0, 0, 6.3), 6 + k * 16, (6 + k * 16) * 0.5, 0, 0, TAU);
+  g.strokeStyle = `rgba(255, 255, 255, ${0.5 * (1 - k)})`;
+  g.lineWidth = 1;
+  g.stroke();
+}
+
+const BUILDING_DRAW = { hut, field, sawmill, quarry, market, warehouse, fisher, well, mill, bakery, flowers, fountain };
 
 /** Draws the static part of a building sprite. */
 export function drawBuilding(g, type, tier) {
@@ -637,6 +899,9 @@ export function drawBuildingDynamic(g, type, tier, t, phase) {
     case 'quarry': quarryCrane(g, tier, t + phase); break;
     case 'market': marketFlag(g, tier, t + phase); break;
     case 'warehouse': warehouseCrane(g, tier, t + phase); break;
+    case 'fisher': fisherBoat(g, tier, t + phase); break;
+    case 'mill': millSails(g, tier, t + phase); break;
+    case 'fountain': fountainWater(g, tier, t + phase); break;
     default: break;
   }
 }
@@ -650,6 +915,12 @@ export function buildingHeight(type, tier) {
     case 'quarry': return tier >= 2 ? 46 : 30;
     case 'market': return 48;
     case 'warehouse': return tier === 3 ? 66 : 50;
+    case 'fisher': return 30;
+    case 'well': return 38;
+    case 'mill': return 72;
+    case 'bakery': return 40;
+    case 'flowers': return 14;
+    case 'fountain': return tier >= 2 ? 44 : 34;
     default: return 40;
   }
 }

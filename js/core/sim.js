@@ -5,8 +5,8 @@
  */
 import { BALANCE, BUILDINGS, CAPPED, GAME, RESOURCES } from '../config.js';
 import {
-  adjacencyBonus, baseRateOf, capsOf, emptyRes, housingOf, occupancy, popCapOf,
-  producesFood, refundOf, slotsOf, storageOf, upgradeCost,
+  adjacencyBonus, auraOf, baseRateOf, capsOf, charmMultiplier, charmOf, emptyRes, housingOf, occupancy, popCapOf,
+  producesFood, refundOf, slotsOf, storageOf, totalCharm, upgradeCost,
 } from './economy.js';
 import { prestigeMultiplier } from './prestige.js';
 import { updateQuests } from './quests.js';
@@ -67,6 +67,8 @@ function computeDerived(state, workers) {
   const prod = emptyRes();
   const per = new Map();
   const pm = prestigeMultiplier(state);
+  const charm = totalCharm(state);
+  const coinMult = charmMultiplier(charm);
   for (const b of producers) {
     const slots = slotsOf(b.type, b.level);
     const w = alloc.get(b.id) || 0;
@@ -75,13 +77,13 @@ function computeDerived(state, workers) {
     const base = baseRateOf(b.type, b.level);
     const rate = {};
     for (const k in base) {
-      rate[k] = base[k] * staff * (1 + bonus) * pm;
+      rate[k] = base[k] * staff * (1 + bonus) * pm * (k === 'coins' ? coinMult : 1);
       prod[k] += rate[k];
     }
     per.set(b.id, { workers: w, slots, staff, bonus, base, rate });
   }
 
-  return { occ, caps, popCap, jobs, workers, employed: workers - left, idle: left, prod, per };
+  return { occ, caps, popCap, jobs, workers, employed: workers - left, idle: left, prod, per, charm, coinMult };
 }
 
 /** Production multiplier while the granary is empty (1 = no hunger). */
@@ -99,7 +101,7 @@ export function getRates(state) {
   const d = derive(state);
   const consumption = state.pop * BALANCE.foodPerPerson;
   const mult = hungerMultiplier(state.res.food, d.prod.food, consumption);
-  const taxes = Math.floor(state.pop + 1e-9) * BALANCE.taxPerPerson;
+  const taxes = Math.floor(state.pop + 1e-9) * BALANCE.taxPerPerson * d.coinMult;
   const gross = {
     wood: d.prod.wood * mult + BALANCE.gatherWood,
     stone: d.prod.stone * mult,
@@ -137,7 +139,7 @@ export function tick(state, dt, out = null, report = null) {
   }
 
   // 2) Everything else (hunger slows it down; brushwood gathering always works).
-  const taxes = Math.floor(state.pop + 1e-9) * B.taxPerPerson;
+  const taxes = Math.floor(state.pop + 1e-9) * B.taxPerPerson * d.coinMult;
   const wood = (d.prod.wood * mult + B.gatherWood) * dt;
   const stone = d.prod.stone * mult * dt;
   const coins = (d.prod.coins + taxes) * mult * dt;
@@ -241,7 +243,7 @@ export function buildingInfo(state, b, rates = getRates(state)) {
   const bonus = p ? p.bonus : adjacencyBonus(state, b.type, b.x, b.y);
   const rate = {};
   if (p) for (const k in p.rate) rate[k] = k === 'food' ? p.rate[k] : p.rate[k] * rates.mult;
-  const fullRate = scaleRate(baseRateOf(b.type, b.level), 1 + bonus);
+  const fullRate = scaleRate(baseRateOf(b.type, b.level), 1 + bonus, rates.coinMult);
   const cost = upgradeCost(b);
   return {
     id: b.id,
@@ -253,6 +255,9 @@ export function buildingInfo(state, b, rates = getRates(state)) {
     slots: slotsOf(b.type, b.level),
     housing: housingOf(b.type, b.level),
     storage: storageOf(b.type, b.level),
+    aura: auraOf(b.type, b.level),
+    charm: charmOf(b.type, b.level),
+    coinMult: rates.coinMult,
     rate,
     fullRate,
     upgradeCost: cost,
@@ -262,14 +267,16 @@ export function buildingInfo(state, b, rates = getRates(state)) {
       slots: slotsOf(b.type, b.level + 1),
       housing: housingOf(b.type, b.level + 1),
       storage: storageOf(b.type, b.level + 1),
-      fullRate: scaleRate(baseRateOf(b.type, b.level + 1), 1 + bonus),
+      aura: auraOf(b.type, b.level + 1),
+      charm: charmOf(b.type, b.level + 1),
+      fullRate: scaleRate(baseRateOf(b.type, b.level + 1), 1 + bonus, rates.coinMult),
     } : null,
   };
 }
 
-function scaleRate(rate, k) {
+function scaleRate(rate, k, coinMult = 1) {
   if (!rate) return null;
   const out = {};
-  for (const key in rate) out[key] = rate[key] * k;
+  for (const key in rate) out[key] = rate[key] * k * (key === 'coins' ? coinMult : 1);
   return out;
 }

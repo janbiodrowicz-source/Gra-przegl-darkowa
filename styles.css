@@ -862,8 +862,15 @@ button:focus-visible { outline: 3px solid var(--c-accent-2); outline-offset: 2px
   }
   .hud-btn { position: absolute; top: calc(var(--sat) + 10px); right: calc(var(--sar) + 10px); width: 52px; height: 52px; }
 
-  .buildbar { left: 50%; right: auto; translate: -50% 0; }
-  .buildbar__track { overflow: visible; -webkit-mask-image: none; mask-image: none; }
+  .buildbar { left: 50%; right: auto; translate: -50% 0; max-width: calc(100vw - var(--sal) - var(--sar) - 24px); }
+  /* 12 cards no longer fit on smaller laptops: scroll (wheel works too), fade only when it overflows */
+  .buildbar__track { -webkit-mask-image: none; mask-image: none; scrollbar-width: thin; }
+  .buildbar__track.is-overflow {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 28px), transparent);
+  }
+  .buildbar__track.is-overflow.at-start { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  .buildbar__track.is-overflow.at-end { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px); mask-image: linear-gradient(90deg, transparent 0, #000 24px); }
   .card { flex-basis: 98px; height: 116px; }
   .card__art { width: 64px; height: 56px; }
   .card__art .art-svg .ico, .card__art svg { width: 56px; height: 56px; }

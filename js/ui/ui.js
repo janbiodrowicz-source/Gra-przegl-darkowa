@@ -371,6 +371,7 @@ export function createUI({ game, bus, sfx, audio, platform }) {
       for (const [type, v] of Object.entries(byType)) rows.push([t(`b.${type}.name`), fmtRate(v)]);
       if (key === 'wood') rows.push([t('ui.gathering'), fmtRate(BALANCE.gatherWood)]);
       if (key === 'coins') rows.push([t('ui.taxes'), fmtRate(r.taxes * r.mult)]);
+      if (key === 'coins' && r.charm > 0) rows.push([`${t('ui.charmTotal')} (${r.charm})`, fmtPct(r.coinMult - 1)]);
       if (key === 'food') rows.push([t('ui.consumption'), fmtRate(-r.consumption.food)]);
       if (r.hungry && key !== 'food') rows.push([t('ui.hungerPenalty'), fmtPct(r.mult - 1)]);
       if (Number.isFinite(r.caps[key])) rows.push([t('ui.cap'), fmt(r.caps[key])]);
@@ -407,8 +408,11 @@ export function createUI({ game, bus, sfx, audio, platform }) {
       return;
     }
     if (parts.modals.isOpen || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    const n = Number(e.key);
-    if (Number.isInteger(n) && n >= 1 && n <= BUILDING_ORDER.length) onCard(BUILDING_ORDER[n - 1]);
+    const n = e.key === '0' ? 10 : Number(e.key); // 1–9, 0 = tenth card
+    if (e.key.length === 1 && Number.isInteger(n) && n >= 1 && n <= BUILDING_ORDER.length) {
+      parts.bar.reveal(BUILDING_ORDER[n - 1]);
+      onCard(BUILDING_ORDER[n - 1]);
+    }
     else if (e.key === 'Enter' && ui.mode === 'place' && !onButton) confirmPlacement();
     else if (e.key === 'q' || e.key === 'Q') openQuests();
   });
@@ -466,6 +470,8 @@ export function createUI({ game, bus, sfx, audio, platform }) {
   bus.on('unlocked', (e) => {
     game.dispatch('setHint', `new_${e.building}`);
     toast(t('toast.unlocked', { name: name(e.building) }), { kind: 'good', icon: e.building, ms: 3600 });
+    // the card may sit off-screen at the end of the bar: bring it into view
+    setTimeout(() => parts?.bar.reveal(e.building), 500);
   });
   bus.on('hungerStart', () => {
     sfx.warn();

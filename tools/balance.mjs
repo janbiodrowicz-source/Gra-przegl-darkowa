@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Balance bot: plays the first minutes with the real core (no DOM) and checks
- * the pacing targets.  Usage:  node tools/balance.mjs [--minutes=15] [--seeds=5] [--verbose]
+ * the pacing targets.  Usage:  node tools/balance.mjs [--minutes=60] [--seeds=5] [--verbose]
  *
  * Two player profiles:
  *   active – checks in every 3 s (an engaged first session), chops a few trees early
@@ -9,8 +9,8 @@
  */
 import { BALANCE, BUILDINGS, BUILDING_ORDER, CAPPED, QUESTS } from '../js/config.js';
 import { createState } from '../js/core/state.js';
-import { buildCost, canAfford, countType, isUnlocked, upgradeCost, adjacencyBonus } from '../js/core/economy.js';
-import { build, claimQuest, clearTile, suggestSpot, upgrade } from '../js/core/actions.js';
+import { buildCost, canAfford, countType, isUnlocked, upgradeCost, charmOf, housingOf } from '../js/core/economy.js';
+import { build, claimQuest, clearTile, placementPreview, suggestSpot, upgrade } from '../js/core/actions.js';
 import { currentQuest, questProgress } from '../js/core/quests.js';
 import { getRates, tick, timeToAfford } from '../js/core/sim.js';
 import { N, idx } from '../js/core/map.js';
@@ -19,7 +19,8 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
   const [k, v = 'true'] = a.replace(/^--/, '').split('=');
   return [k, v];
 }));
-const MINUTES = Number(args.minutes || 15);
+const MINUTES = Number(args.minutes || 60);
+const LONG = MINUTES >= 55; // second-wave targets only make sense for a full hour
 const SEEDS = Number(args.seeds || 5);
 const VERBOSE = args.verbose === 'true';
 
@@ -41,18 +42,18 @@ function wants(s) {
 
   // 1) food first: never let the town starve for long
   const futureCons = Math.max(s.pop, Math.min(popCap, s.pop + 4)) * BALANCE.foodPerPerson;
-  if (r.hungry || r.gross.food < futureCons + 0.05) want('build', 'field', 'food');
+  if (r.hungry || r.gross.food < futureCons + 0.05) want('build', bestMaker(s, 'food'), 'food');
 
   // 1b) idle hands → more production of the scarcest resource (wood is used by everything)
   if (r.idle >= 2) {
     const score = { wood: r.gross.wood / 1, stone: r.gross.stone / 0.45 };
     if (countType(s, 'market') > 0) score.coins = r.gross.coins / 0.5;
     const res = Object.entries(score).sort((a, b) => a[1] - b[1])[0][0];
-    want('build', res === 'wood' ? 'sawmill' : res === 'stone' ? 'quarry' : 'market', 'idle hands');
+    want('build', bestMaker(s, res), 'idle hands');
   }
 
   // 2) freshly unlocked buildings are irresistible
-  for (const type of ['market', 'warehouse']) {
+  for (const type of ['market', 'warehouse', 'fisher', 'well', 'mill', 'bakery', 'flowers', 'fountain']) {
     if (isUnlocked(s, type) && countType(s, type) === 0) want('build', type, 'new');
   }
 
@@ -62,7 +63,13 @@ function wants(s) {
     if (g.type === 'have') {
       for (const [type, n] of Object.entries(g.buildings)) if (countType(s, type) < n) want('build', type, `quest ${q.id}`);
     } else if (g.type === 'pop') {
-      if (popCap < g.count) want('build', 'hut', `quest ${q.id}`);
+      if (popCap < g.count) wantHousing(s, want, `quest ${q.id}`);
+    } else if (g.type === 'charm') {
+      const c = bestCharm(s);
+      if (c) want(c.kind, c.type, `quest ${q.id}`, c.id);
+    } else if (g.type === 'resource') {
+      if (r.caps[g.res] < g.amount) want('build', 'warehouse', `quest ${q.id}`);
+      else if (r.net[g.res] < 0.5) want('build', bestMaker(s, g.res), `quest ${q.id}`);
     } else if (g.type === 'level') {
       // the cheapest way to get one building to the required level
       const best = [...s.buildings].filter((b) => b.level < g.level && upgradeCost(b))
@@ -72,7 +79,7 @@ function wants(s) {
   }
 
   // 5) housing when full and people are needed
-  if (s.pop >= popCap - 0.5 && r.jobs >= popCap - 1) want('build', 'hut', 'housing');
+  if (s.pop >= popCap - 0.5 && r.jobs >= popCap - 1) wantHousing(s, want, 'housing');
 
   // 6) storage when full or when something does not fit
   if (isUnlocked(s, 'warehouse')) {
@@ -90,9 +97,53 @@ function wants(s) {
       .sort((a, b) => sumCost(upgradeCost(a)) - sumCost(upgradeCost(b)));
     if (ups[0]) want('upgrade', ups[0].type, 'upgrade', ups[0].id);
   }
+  // 7b) charm pays for itself once there is a coin economy
+  if (isUnlocked(s, 'flowers') && r.gross.coins > 0.8) {
+    const c = bestCharm(s);
+    if (c) want(c.kind, c.type, 'charm', c.id);
+  }
   // 8) otherwise more huts (more taxes, more people)
-  want('build', 'hut', 'grow');
+  wantHousing(s, want, 'grow');
   return { list, rates: r };
+}
+
+/** The unlocked building that makes `res` most cheaply (rate per resource spent). */
+function bestMaker(s, res) {
+  let best = null, bestScore = -Infinity;
+  for (const type of BUILDING_ORDER) {
+    const def = BUILDINGS[type];
+    if (!def.produce || !(res in def.produce) || !isUnlocked(s, type)) continue;
+    const spot = suggestSpot(s, type);
+    if (!spot) continue;
+    const prev = placementPreview(s, type, spot.x, spot.y);
+    const score = (prev.rate?.[res] ?? 0) / (sumCost(buildCost(s, type)) * (def.workers || 1));
+    if (score > bestScore) { bestScore = score; best = type; }
+  }
+  return best || (res === 'food' ? 'field' : res === 'wood' ? 'sawmill' : res === 'stone' ? 'quarry' : 'market');
+}
+
+/** A new hut, or upgrading one when that houses people more cheaply (or the island is full). */
+function wantHousing(s, want, why) {
+  const spot = suggestSpot(s, 'hut');
+  const newCost = sumCost(buildCost(s, 'hut')) / housingOf('hut', 1);
+  const huts = s.buildings.filter((b) => b.type === 'hut' && upgradeCost(b))
+    .map((b) => ({ b, per: sumCost(upgradeCost(b)) / (housingOf('hut', b.level + 1) - housingOf('hut', b.level)) }))
+    .sort((a, b) => a.per - b.per);
+  if (huts[0] && (!spot || huts[0].per < newCost * 0.9)) want('upgrade', 'hut', why, huts[0].b.id);
+  else if (spot) want('build', 'hut', why);
+}
+
+/** Cheapest charm per resource: a new flowerbed/fountain or an upgrade of one. */
+function bestCharm(s) {
+  const opts = [];
+  for (const type of ['flowers', 'fountain']) {
+    if (isUnlocked(s, type) && suggestSpot(s, type)) opts.push({ kind: 'build', type, per: sumCost(buildCost(s, type)) / charmOf(type, 1) });
+  }
+  for (const b of s.buildings) {
+    if (!BUILDINGS[b.type].charm || !upgradeCost(b)) continue;
+    opts.push({ kind: 'upgrade', type: b.type, id: b.id, per: sumCost(upgradeCost(b)) / (charmOf(b.type, b.level + 1) - charmOf(b.type, b.level)) });
+  }
+  return opts.sort((a, b) => a.per - b.per)[0] || null;
 }
 
 const sumCost = (c) => Object.values(c).reduce((a, b) => a + b, 0);
@@ -236,7 +287,8 @@ function play(seed, profile, minutes, log) {
     seed,
     milestones,
     maxGapEarly: gaps(0, Math.min(T, 300)),
-    maxGapLate: T > 300 ? gaps(300, T) : 0,
+    maxGapMid: T > 300 ? gaps(300, Math.min(T, 900)) : 0,
+    maxGapLate: T > 900 ? gaps(900, T) : 0,
     actions: actions.length,
     chops,
     maxStuck,
@@ -256,8 +308,11 @@ const TARGETS = [
   ['all 6 buildings unlocked', (r) => Math.max(r.milestones.unlock_market ?? Infinity, r.milestones.unlock_warehouse ?? Infinity), (v) => v >= 4.5 * 60 && v <= 9 * 60, '4:30–9:00', 'median'],
   ['first full wood/stone', (r) => r.milestones.firstFull ?? Infinity, (v) => v >= 4 * 60 && v <= 10 * 60, '4–10 min', 'median'],
   ['quest 5 done', (r) => r.milestones.done_q5 ?? Infinity, (v) => v >= 9 * 60 && v <= 14 * 60, '9–14 min', 'median'],
+  ['quest 10 done', (r) => r.milestones.done_q10 ?? Infinity, (v) => !LONG || (v >= 20 * 60 && v <= 32 * 60), '20–32 min', 'median'],
+  ['quest 14 done', (r) => r.milestones.done_q14 ?? Infinity, (v) => !LONG || (v >= 38 * 60 && v <= 55 * 60), '38–55 min', 'median'],
   ['max gap 0–5 min', (r) => r.maxGapEarly, (v) => v <= 65, '≤ 65 s', 'all'],
-  ['max gap 5–15 min', (r) => r.maxGapLate, (v) => v <= 150, '≤ 150 s', 'all'],
+  ['max gap 5–15 min', (r) => r.maxGapMid, (v) => v <= 150, '≤ 150 s', 'all'],
+  ['max gap 15–60 min', (r) => r.maxGapLate, (v) => v <= 180, '≤ 180 s', 'all'],
   ['dead ends', (r) => r.maxStuck, (v) => v < 120, '< 120 s', 'all'],
 ];
 
@@ -285,7 +340,7 @@ for (const [name, profile] of Object.entries(PROFILES)) {
   }
   const f = runs[0].final;
   console.log(`  milestones (seed ${runs[0].seed}): ${Object.entries(runs[0].milestones).map(([k, v]) => `${k}=${fmtT(v)}`).join(', ')}`);
-  console.log(`  after ${MINUTES} min: ${f.buildings} buildings, ${f.pop} residents, ${f.quests}/5 quests, ${runs[0].actions} actions, ${runs[0].chops} chops`);
+  console.log(`  after ${MINUTES} min: ${f.buildings} buildings, ${f.pop} residents, ${f.quests}/${QUESTS.length} quests, ${runs[0].actions} actions, ${runs[0].chops} chops`);
 }
 console.log(failures ? `\n${failures} target(s) missed` : '\nAll pacing targets met ✨');
 process.exit(failures ? 1 : 0);

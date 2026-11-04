@@ -171,11 +171,65 @@ export function neighborCount(state, kind, x, y, occ = null) {
   return n;
 }
 
-/** Production bonus (0.3 = +30 %) a building of `type` would get at (x, y). */
+/**
+ * Production bonus (0.3 = +30 %) a building of `type` would get at (x, y):
+ * its own neighbour rule plus auras of neighbouring buildings (e.g. wells).
+ */
 export function adjacencyBonus(state, type, x, y, occ = null) {
   const adj = BUILDINGS[type]?.adjacency;
-  if (!adj) return 0;
-  return neighborCount(state, adj.kind, x, y, occ) * adj.bonus;
+  const own = adj ? neighborCount(state, adj.kind, x, y, occ) * adj.bonus : 0;
+  return own + auraBonus(state, type, x, y, occ);
+}
+
+/** Aura strength of a building type at a level (0 when it has none). */
+export function auraOf(type, level) {
+  const a = BUILDINGS[type]?.aura;
+  return a ? a.bonus + (a.bonusPerLevel || 0) * (level - 1) : 0;
+}
+
+/** Bonus a building of `type` at (x, y) receives from neighbouring auras. */
+export function auraBonus(state, type, x, y, occ = null) {
+  let sum = 0;
+  for (const [dx, dy] of NEIGHBORS8) {
+    const b = occ ? occ.get(occKey(x + dx, y + dy)) : buildingAt(state, x + dx, y + dy);
+    if (b && BUILDINGS[b.type]?.aura?.targets.includes(type)) sum += auraOf(b.type, b.level);
+  }
+  return sum;
+}
+
+/** Neighbouring buildings an aura building at (x, y) would boost. */
+export function auraTargetsAt(state, type, x, y, occ = null) {
+  const a = BUILDINGS[type]?.aura;
+  if (!a) return 0;
+  let n = 0;
+  for (const [dx, dy] of NEIGHBORS8) {
+    const b = occ ? occ.get(occKey(x + dx, y + dy)) : buildingAt(state, x + dx, y + dy);
+    if (b && a.targets.includes(b.type)) n++;
+  }
+  return n;
+}
+
+/** True when (x, y) touches water (8-neighbourhood). */
+export function isCoastal(state, x, y) {
+  return neighborCount(state, 'water', x, y) > 0;
+}
+
+/* ---------------- charm (decorations) ---------------- */
+
+export function charmOf(type, level) {
+  const d = BUILDINGS[type];
+  return d?.charm ? d.charm + (d.charmPerLevel || 0) * (level - 1) : 0;
+}
+
+export function totalCharm(state) {
+  let n = 0;
+  for (const b of state.buildings) n += charmOf(b.type, b.level);
+  return n;
+}
+
+/** Multiplier for all coin income (markets, bakeries, taxes). */
+export function charmMultiplier(charm) {
+  return 1 + charm * BALANCE.charmCoinBonus;
 }
 
 /* ---------------- capacities ---------------- */

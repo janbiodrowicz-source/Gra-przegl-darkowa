@@ -91,6 +91,26 @@ export function createPanel({ onUpgrade, onDemolish, onClear, onClose, artFor })
         h('span.stat__value', null, h('span', { html: icon(glyph) }), v, rule)));
     }
 
+    if (def.aura) {
+      const v = h('span.stat__num');
+      r.statRefs.aura = v;
+      const names = def.aura.targets.map((type) => t(`b.${type}.name`)).join(', ');
+      r.statRefs.auraRule = h('span.stat__rule');
+      r.statRefs.auraNames = names;
+      stats.append(h('div.stat.stat--bonus.stat--wide', null,
+        h('span.stat__label', null, t('ui.aura')),
+        h('span.stat__value', null, h('span', { html: icon('drop') }), v, r.statRefs.auraRule)));
+    }
+    if (def.charm) {
+      const v = h('span.stat__num');
+      r.statRefs.charm = v;
+      stats.append(stat(t('ui.charm'), [h('span', { html: icon('sparkle') }), v]));
+      const tot = h('span.stat__num');
+      r.statRefs.charmTotal = tot;
+      stats.append(stat(t('ui.charmTotal'), [h('span', { html: icon('coins') }), tot]));
+      stats.append(h('div.stat.stat--wide', null, h('span.stat__rule', null, t('ui.charmRule', { pct: Math.round(BALANCE.charmCoinBonus * 100) }))));
+    }
+
     r.next = h('div.next');
     r.upCost = h('span.btn__costrow');
     r.upBtn = h('button.btn.btn--primary.btn--block.panel__upgrade', { type: 'button', onclick: () => onUpgrade(b.id) },
@@ -187,19 +207,27 @@ export function createPanel({ onUpgrade, onDemolish, onClear, onClose, artFor })
       setClass(s.workers.parentNode.parentNode, 'is-warn', info.workers < info.slots);
     }
     if (s.housing) setText(s.housing, String(info.housing));
-    if (s.tax) setText(s.tax, fmtRate(info.housing * BALANCE.taxPerPerson));
+    if (s.tax) setText(s.tax, fmtRate(info.housing * BALANCE.taxPerPerson * info.coinMult));
+    if (s.aura) {
+      setText(s.aura, fmtPct(info.aura));
+      setText(s.auraRule, t('ui.auraRule', { pct: Math.round(info.aura * 100), names: s.auraNames }));
+    }
+    if (s.charm) setText(s.charm, `+${info.charm}`);
+    if (s.charmTotal) setText(s.charmTotal, fmtPct(info.coinMult - 1));
     if (s.storage) setText(s.storage, `+${fmt(info.storage)}`);
     if (s.bonus) setText(s.bonus, fmtPct(info.bonus));
 
     // next level preview
     if (info.next) {
       const n = info.next;
-      setNodes(refs.next, `n:${b.level}:${info.bonus}`, () => {
+      setNodes(refs.next, `n:${b.level}:${info.bonus}:${info.coinMult}`, () => {
         const nodes = [h('b', null, `${t('ui.nextLevel', { n: n.level })}:`)];
         if (n.fullRate) nodes.push(...amounts(n.fullRate, { rate: true }));
         if (n.slots) nodes.push(chip('worker', String(n.slots)));
         if (n.housing) nodes.push(chip('pop', String(n.housing)));
         if (n.storage) nodes.push(chip('box', `+${fmt(n.storage)}`));
+        if (n.aura) nodes.push(chip('drop', fmtPct(n.aura)));
+        if (n.charm) nodes.push(chip('sparkle', `+${n.charm}`));
         return nodes;
       });
       const afford = canAfford(state.res, info.upgradeCost);

@@ -40,6 +40,20 @@ export function createBuildBar({ onCard, onConfirm, onCancel, artFor }) {
   }
 
   const track = h('div.buildbar__track', null, BUILDING_ORDER.map((type) => cards[type].el));
+  // desktop: a plain mouse wheel scrolls the cards sideways; fades show there is more
+  const edges = () => {
+    const over = track.scrollWidth > track.clientWidth + 2;
+    setClass(track, 'is-overflow', over);
+    setClass(track, 'at-start', over && track.scrollLeft < 4);
+    setClass(track, 'at-end', over && track.scrollLeft > track.scrollWidth - track.clientWidth - 4);
+  };
+  track.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || track.scrollWidth <= track.clientWidth) return;
+    track.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
+  track.addEventListener('scroll', edges, { passive: true });
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(edges).observe(track);
 
   // Placement bar
   const pArt = h('span.placebar__art');
@@ -105,9 +119,11 @@ export function createBuildBar({ onCard, onConfirm, onCancel, artFor }) {
         ok = check.ok;
         if (ok) {
           const prev = placementPreview(state, ui.placing, g.x, g.y);
-          key = `ok:${g.x},${g.y}:${prev.bonus}`;
+          key = `ok:${g.x},${g.y}:${prev.bonus}:${prev.auraCount}`;
           nodes = [...amounts(prev.rate || {}, { rate: true })];
           if (prev.bonus > 0) nodes.push(chip('sparkle', fmtPct(prev.bonus)));
+          if (prev.aura) nodes.push(chip('drop', t('ui.auraFor', { pct: Math.round(prev.aura * 100), n: prev.auraCount })));
+          if (prev.charm) nodes.push(chip('sparkle', `${t('ui.charm')} +${prev.charm}`));
           if (!nodes.length) nodes.push(t(`b.${ui.placing}.desc`));
         } else {
           key = `bad:${check.reason}`;
@@ -150,7 +166,15 @@ export function createBuildBar({ onCard, onConfirm, onCancel, artFor }) {
     return null;
   }
 
-  return { el, update, whyNot, cards };
+  /** Scrolls the bar so a card is visible (e.g. right after it was unlocked). */
+  function reveal(type) {
+    const card = cards[type]?.el;
+    if (!card || track.scrollWidth <= track.clientWidth) return;
+    const left = card.offsetLeft - (track.clientWidth - card.offsetWidth) / 2;
+    track.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+  }
+
+  return { el, update, whyNot, cards, reveal };
 }
 
 /** Where a resource comes from — the first unlocked producer, or the next quest that unlocks one. */

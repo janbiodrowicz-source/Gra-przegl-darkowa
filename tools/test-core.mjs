@@ -8,7 +8,7 @@ import { BALANCE, BUILDINGS, GAME, MAP, QUESTS, RESOURCES } from '../js/config.j
 import { N, TILE, generateIsland, idx, isBuildable, isClearable, tileAt } from '../js/core/map.js';
 import { createState } from '../js/core/state.js';
 import * as eco from '../js/core/economy.js';
-import { derive, getRates, simulate, tick, timeToAfford, buildingInfo } from '../js/core/sim.js';
+import { derive, getRates, simulate, tick, timeToAfford, buildingInfo, invalidate as invalidateRates } from '../js/core/sim.js';
 import * as actions from '../js/core/actions.js';
 import { questProgress, currentQuest } from '../js/core/quests.js';
 import { canPrestige, applyPrestige } from '../js/core/prestige.js';
@@ -479,6 +479,80 @@ test('settings: defaults, locale hint, stored values', () => {
   assert.deepEqual(loadSettings(st, { locale: 'pl-PL' }), { sound: false, lang: 'en' });
   const bad = memStorage({ [GAME.settingsKey]: '{nope' });
   assert.deepEqual(loadSettings(bad), { sound: true, lang: 'pl' });
+});
+
+
+/* ---------------- second wave ---------------- */
+
+function unlockAll(state) {
+  for (const q of QUESTS) state.quests[q.id] = 'claimed';
+}
+
+test('fisher: coast only, water bonus', () => {
+  const s = createState({ seed: 77 });
+  unlockAll(s);
+  rich(s);
+  const inland = freeTile(s, (x, y) => !eco.isCoastal(s, x, y));
+  const coast = freeTile(s, (x, y) => eco.isCoastal(s, x, y));
+  assert.ok(inland && coast);
+  assert.equal(actions.canPlace(s, 'fisher', inland.x, inland.y).reason, 'notCoast');
+  const check = actions.canPlace(s, 'fisher', coast.x, coast.y);
+  assert.ok(check.ok);
+  assert.ok(check.bonus >= BUILDINGS.fisher.adjacency.bonus - 1e-9);
+});
+
+test('well aura boosts neighbouring fields (and stacks with levels)', () => {
+  const s = createState({ seed: 78 });
+  unlockAll(s);
+  rich(s);
+  const spot = freeTile(s, (x, y) => isBuildable(s.tiles[idx(x + 1, y)]) && !eco.buildingAt(s, x + 1, y));
+  assert.ok(actions.build(s, 'field', spot.x, spot.y).ok);
+  const field = s.buildings.at(-1);
+  const before = eco.adjacencyBonus(s, 'field', field.x, field.y);
+  const prev = actions.placementPreview(s, 'well', spot.x + 1, spot.y);
+  assert.equal(prev.auraCount, 1);
+  assert.ok(actions.build(s, 'well', spot.x + 1, spot.y).ok);
+  const well = s.buildings.at(-1);
+  assert.ok(Math.abs(eco.adjacencyBonus(s, 'field', field.x, field.y) - before - 0.25) < 1e-9);
+  actions.upgrade(s, well.id);
+  assert.ok(Math.abs(eco.adjacencyBonus(s, 'field', field.x, field.y) - before - 0.3) < 1e-9);
+  // the aura is not for everybody
+  assert.equal(eco.auraBonus(s, 'sawmill', field.x, field.y), 0);
+});
+
+test('charm: decorations raise coin income and count for charm quests', () => {
+  const s = createState({ seed: 79 });
+  unlockAll(s);
+  rich(s);
+  s.pop = 3;
+  invalidateRates(s);
+  const coins0 = getRates(s).gross.coins;
+  const a = freeTile(s);
+  assert.ok(actions.build(s, 'flowers', a.x, a.y).ok);
+  const b = freeTile(s);
+  assert.ok(actions.build(s, 'fountain', b.x, b.y).ok);
+  assert.equal(eco.totalCharm(s), 1 + 6);
+  const r = getRates(s);
+  assert.ok(Math.abs(r.coinMult - (1 + 7 * BALANCE.charmCoinBonus)) < 1e-9);
+  assert.ok(Math.abs(r.gross.coins - coins0 * r.coinMult) < 1e-9);
+  const q = QUESTS.find((x) => x.goal.type === 'charm');
+  assert.deepEqual(questProgress(s, q), { cur: Math.min(7, q.goal.amount), max: q.goal.amount });
+});
+
+test('second wave unlocks follow the quest chain; old finished saves continue', () => {
+  for (const type of ['fisher', 'well', 'mill', 'bakery', 'flowers', 'fountain']) {
+    const q = BUILDINGS[type].unlock;
+    assert.ok(QUESTS.some((x) => x.id === q), `${type} unlock quest exists`);
+  }
+  // a v1 save from before the update: all five original quests claimed
+  const s = createState({ seed: 80 });
+  const raw = JSON.parse(serialize(s, 0)).state;
+  raw.quests = { q1: 'claimed', q2: 'claimed', q3: 'claimed', q4: 'claimed', q5: 'claimed' };
+  const fixed = sanitize(raw);
+  assert.equal(fixed.quests.q6, 'active');
+  assert.equal(fixed.quests.q7, 'locked');
+  assert.ok(eco.isUnlocked(fixed, 'fisher'));
+  assert.ok(!eco.isUnlocked(fixed, 'mill'));
 });
 
 /* ---------------- i18n & bus ---------------- */

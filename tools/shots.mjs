@@ -50,6 +50,37 @@ export const SCENARIOS = {
       await wait(page, 1800);
     },
   },
+  wave2: {
+    // the ~40 min town: windmill, bakery, fisher, well, flowerbeds, fountain
+    path: '?test&demo=2',
+    fresh: true,
+    async run(page) {
+      await wait(page, 1800);
+      return game(page, () => ({ quest: window.__ui ? document.querySelector('.qpill__title')?.textContent : null, buildings: window.__game.state.buildings.length }));
+    },
+  },
+  wave2panel: {
+    path: '?test&demo=2',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await game(page, () => {
+        const b = window.__game.state.buildings.find((x) => x.type === 'well');
+        window.__ui.select({ kind: 'building', id: b.id });
+      });
+      await wait(page, 700);
+    },
+  },
+  wave2place: {
+    path: '?test&demo=2',
+    fresh: true,
+    async run(page) {
+      await wait(page, 900);
+      await page.click('.card[data-type="fisher"]');
+      await wait(page, 900);
+      return game(page, () => document.querySelector('.placebar__meta')?.textContent);
+    },
+  },
   panel: {
     path: '?test&demo',
     fresh: true,
